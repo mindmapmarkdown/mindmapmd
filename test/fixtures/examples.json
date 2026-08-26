@@ -1,0 +1,501 @@
+{
+  "_comment": "GENERATED FILE — DO NOT EDIT. Extracted from spec.md by tools/extract-examples.mjs. Edit the example in spec.md and regenerate; a hand-edit here changes the conformance suite without changing the specification, and the two silently disagree. See CONTRIBUTING.md §6.",
+  "source": "spec.md",
+  "examples": [
+    {
+      "example": 1,
+      "section": "2.1",
+      "heading": "Node kind",
+      "start_line": 430,
+      "end_line": 437,
+      "markdown": "# Project\n## Install\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Project",
+            "content": [],
+            "children": [
+              {
+                "kind": "section",
+                "label": "Install",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 2,
+      "section": "2.1",
+      "heading": "Node kind",
+      "start_line": 441,
+      "end_line": 448,
+      "markdown": "- Project\n  - Install\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "Project",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "Install",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 3,
+      "section": "2.1",
+      "heading": "Node kind",
+      "start_line": 456,
+      "end_line": 465,
+      "markdown": "# Install\n- npm\n- pnpm\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Install",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "npm",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "pnpm",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 4,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 530,
+      "end_line": 538,
+      "markdown": "# Install\nNode.js 20 or later.\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Install",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "Node.js 20 or later."
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 5,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 543,
+      "end_line": 550,
+      "markdown": "Some prose.\n\n# A\n",
+      "tree": {
+        "content": [
+          {
+            "block": "paragraph",
+            "source": "Some prose."
+          }
+        ],
+        "children": [
+          {
+            "kind": "section",
+            "label": "A",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 6,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 556,
+      "end_line": 566,
+      "markdown": "Install\n=======\n\nRequirements\n------------\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Install",
+            "content": [],
+            "children": [
+              {
+                "kind": "section",
+                "label": "Requirements",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 7,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 571,
+      "end_line": 586,
+      "markdown": "# Install\n\n> Requires Node 20.\n\n```bash\nnpm i\n```\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Install",
+            "content": [
+              {
+                "block": "block_quote",
+                "source": "> Requires Node 20."
+              },
+              {
+                "block": "code_block",
+                "source": "```bash\nnpm i\n```"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 8,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 592,
+      "end_line": 605,
+      "markdown": "# Platforms\n\n| Platform | Status |\n|---|---|\n| Linux | ok |\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Platforms",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "| Platform | Status |\n|---|---|\n| Linux | ok |"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 9,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 611,
+      "end_line": 620,
+      "markdown": "# Note\nfirst line  \nsecond line\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Note",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "first line\\\nsecond line"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 10,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 624,
+      "end_line": 633,
+      "markdown": "# Note\nfirst line\\\nsecond line\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Note",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "first line\\\nsecond line"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 11,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 639,
+      "end_line": 647,
+      "markdown": "# Links\n- [How to install](https://example.com/)\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Links",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "[How to install](https://example.com/)",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 12,
+      "section": "2.3",
+      "heading": "Depth, and heading levels",
+      "start_line": 673,
+      "end_line": 680,
+      "markdown": "# A\n### B\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "A",
+            "content": [],
+            "children": [
+              {
+                "kind": "section",
+                "label": "B",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 13,
+      "section": "2.3",
+      "heading": "Depth, and heading levels",
+      "start_line": 688,
+      "end_line": 697,
+      "markdown": "# A\n## B\n# C\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "A",
+            "content": [],
+            "children": [
+              {
+                "kind": "section",
+                "label": "B",
+                "content": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "section",
+            "label": "C",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 14,
+      "section": "2.3",
+      "heading": "Depth, and heading levels",
+      "start_line": 702,
+      "end_line": 713,
+      "markdown": "# Menu\n- Drinks\n  - Tea\n    - Green\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Menu",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "Drinks",
+                "content": [],
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "Tea",
+                    "content": [],
+                    "children": [
+                      {
+                        "kind": "item",
+                        "label": "Green",
+                        "content": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 15,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 794,
+      "end_line": 806,
+      "markdown": "- Setup\n\n  Run the installer.\n\n- Verify\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "Setup",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "Run the installer."
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "item",
+            "label": "Verify",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 16,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 818,
+      "end_line": 833,
+      "markdown": "# Install\n\nNode.js 20 or later.\n\n## Requirements\n\n- git\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Install",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "Node.js 20 or later."
+              }
+            ],
+            "children": [
+              {
+                "kind": "section",
+                "label": "Requirements",
+                "content": [],
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "git",
+                    "content": [],
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 17,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 902,
+      "end_line": 909,
+      "markdown": "# Guide\n## **Fast** start\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Guide",
+            "content": [],
+            "children": [
+              {
+                "kind": "section",
+                "label": "**Fast** start",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 18,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 915,
+      "end_line": 920,
+      "markdown": "# café\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "café",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    }
+  ]
+}

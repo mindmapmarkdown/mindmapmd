@@ -1,0 +1,17 @@
+{
+  "name": "mindmapmd",
+  "version": "0.0.0",
+  "description": "Reference implementation of Mindmap Markdown — lift and canonical projection",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src", "LICENSE", "NOTICE", "README.md"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "commonmark": "^0.31.0"
+  },
+  "engines": { "node": ">=20" }
+}

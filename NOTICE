@@ -1,0 +1,12 @@
+mindmapmd — reference implementation of Mindmap Markdown
+Copyright 2026 정제영
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This product bundles no third-party source. It depends at runtime on
+commonmark.js (https://github.com/commonmark/commonmark.js), which is
+distributed under the BSD 2-Clause License by John MacFarlane.
