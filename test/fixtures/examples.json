@@ -7,8 +7,8 @@
       "section": "2.1",
       "heading": "Node kind",
       "start_line": 430,
-      "end_line": 437,
-      "markdown": "# Project\n## Install\n",
+      "end_line": 438,
+      "markdown": "# Project\n\n## Install\n",
       "tree": {
         "content": [],
         "children": [
@@ -32,8 +32,8 @@
       "example": 2,
       "section": "2.1",
       "heading": "Node kind",
-      "start_line": 441,
-      "end_line": 448,
+      "start_line": 442,
+      "end_line": 449,
       "markdown": "- Project\n  - Install\n",
       "tree": {
         "content": [],
@@ -58,9 +58,9 @@
       "example": 3,
       "section": "2.1",
       "heading": "Node kind",
-      "start_line": 456,
-      "end_line": 465,
-      "markdown": "# Install\n- npm\n- pnpm\n",
+      "start_line": 457,
+      "end_line": 467,
+      "markdown": "# Install\n\n- npm\n- pnpm\n",
       "tree": {
         "content": [],
         "children": [
@@ -90,9 +90,9 @@
       "example": 4,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 530,
-      "end_line": 538,
-      "markdown": "# Install\nNode.js 20 or later.\n",
+      "start_line": 532,
+      "end_line": 541,
+      "markdown": "# Install\n\nNode.js 20 or later.\n",
       "tree": {
         "content": [],
         "children": [
@@ -114,8 +114,8 @@
       "example": 5,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 543,
-      "end_line": 550,
+      "start_line": 546,
+      "end_line": 553,
       "markdown": "Some prose.\n\n# A\n",
       "tree": {
         "content": [
@@ -138,8 +138,8 @@
       "example": 6,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 556,
-      "end_line": 566,
+      "start_line": 559,
+      "end_line": 569,
       "markdown": "Install\n=======\n\nRequirements\n------------\n",
       "tree": {
         "content": [],
@@ -164,8 +164,8 @@
       "example": 7,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 571,
-      "end_line": 586,
+      "start_line": 574,
+      "end_line": 589,
       "markdown": "# Install\n\n> Requires Node 20.\n\n```bash\nnpm i\n```\n",
       "tree": {
         "content": [],
@@ -192,8 +192,8 @@
       "example": 8,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 592,
-      "end_line": 605,
+      "start_line": 595,
+      "end_line": 608,
       "markdown": "# Platforms\n\n| Platform | Status |\n|---|---|\n| Linux | ok |\n",
       "tree": {
         "content": [],
@@ -216,9 +216,9 @@
       "example": 9,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 611,
-      "end_line": 620,
-      "markdown": "# Note\nfirst line  \nsecond line\n",
+      "start_line": 614,
+      "end_line": 624,
+      "markdown": "# Note\n\nfirst line  \nsecond line\n",
       "tree": {
         "content": [],
         "children": [
@@ -240,9 +240,9 @@
       "example": 10,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 624,
-      "end_line": 633,
-      "markdown": "# Note\nfirst line\\\nsecond line\n",
+      "start_line": 628,
+      "end_line": 638,
+      "markdown": "# Note\n\nfirst line\\\nsecond line\n",
       "tree": {
         "content": [],
         "children": [
@@ -264,9 +264,9 @@
       "example": 11,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 639,
-      "end_line": 647,
-      "markdown": "# Links\n- [How to install](https://example.com/)\n",
+      "start_line": 644,
+      "end_line": 653,
+      "markdown": "# Links\n\n- [How to install](https://example.com/)\n",
       "tree": {
         "content": [],
         "children": [
@@ -290,9 +290,9 @@
       "example": 12,
       "section": "2.3",
       "heading": "Depth, and heading levels",
-      "start_line": 673,
-      "end_line": 680,
-      "markdown": "# A\n### B\n",
+      "start_line": 679,
+      "end_line": 687,
+      "markdown": "# A\n\n### B\n",
       "tree": {
         "content": [],
         "children": [
@@ -316,9 +316,9 @@
       "example": 13,
       "section": "2.3",
       "heading": "Depth, and heading levels",
-      "start_line": 688,
-      "end_line": 697,
-      "markdown": "# A\n## B\n# C\n",
+      "start_line": 695,
+      "end_line": 706,
+      "markdown": "# A\n\n## B\n\n# C\n",
       "tree": {
         "content": [],
         "children": [
@@ -348,9 +348,9 @@
       "example": 14,
       "section": "2.3",
       "heading": "Depth, and heading levels",
-      "start_line": 702,
-      "end_line": 713,
-      "markdown": "# Menu\n- Drinks\n  - Tea\n    - Green\n",
+      "start_line": 711,
+      "end_line": 723,
+      "markdown": "# Menu\n\n- Drinks\n  - Tea\n    - Green\n",
       "tree": {
         "content": [],
         "children": [
@@ -388,8 +388,34 @@
       "example": 15,
       "section": "2.5",
       "heading": "Canonical projection",
-      "start_line": 794,
-      "end_line": 806,
+      "start_line": 806,
+      "end_line": 813,
+      "markdown": "# A\n## B\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "A",
+            "content": [],
+            "children": [
+              {
+                "kind": "section",
+                "label": "B",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 16,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 824,
+      "end_line": 836,
       "markdown": "- Setup\n\n  Run the installer.\n\n- Verify\n",
       "tree": {
         "content": [],
@@ -415,11 +441,11 @@
       }
     },
     {
-      "example": 16,
+      "example": 17,
       "section": "2.5",
       "heading": "Canonical projection",
-      "start_line": 818,
-      "end_line": 833,
+      "start_line": 848,
+      "end_line": 863,
       "markdown": "# Install\n\nNode.js 20 or later.\n\n## Requirements\n\n- git\n",
       "tree": {
         "content": [],
@@ -453,12 +479,12 @@
       }
     },
     {
-      "example": 17,
+      "example": 18,
       "section": "2.6",
       "heading": "The tree encoding used by examples",
-      "start_line": 902,
-      "end_line": 909,
-      "markdown": "# Guide\n## **Fast** start\n",
+      "start_line": 932,
+      "end_line": 940,
+      "markdown": "# Guide\n\n## **Fast** start\n",
       "tree": {
         "content": [],
         "children": [
@@ -479,11 +505,11 @@
       }
     },
     {
-      "example": 18,
+      "example": 19,
       "section": "2.6",
       "heading": "The tree encoding used by examples",
-      "start_line": 915,
-      "end_line": 920,
+      "start_line": 946,
+      "end_line": 951,
       "markdown": "# café\n",
       "tree": {
         "content": [],
