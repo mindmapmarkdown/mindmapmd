@@ -29,17 +29,16 @@ node --test test/*.test.js
 
 | | |
 |---|---|
-| Lift — every example in the suite | **18 / 18** |
-| Tree round-trip — project, lift back, compare | **18 / 18** |
-| Byte identity, where the example is canonical | **7 / 7** |
+| Lift — every example in the suite | **21 / 21** |
+| Tree round-trip — project, lift back, compare | **21 / 21** |
+| Byte identity, where the example is canonical | **17 / 17** |
 | Idempotence — the second round-trip is byte-stable | **pass** |
 
-**Only 7 of the 18 examples are canonical**, so byte identity is tested on those
-seven and nowhere else. Three of the other eleven are deliberately non-canonical
-— a setext heading, a hard break spelled with trailing spaces, a skipped heading
-level — and exist to show that a conforming document need not be a canonical one.
-The remaining eight are non-canonical for one incidental reason: **no blank line
-after a heading**, which P-7 requires. Filed upstream.
+**17 of the 21 examples are canonical**, so byte identity is tested on those
+seventeen and nowhere else. The other four are deliberately non-canonical — a
+setext heading, a hard break spelled with trailing spaces, a skipped heading
+level, and a heading with no blank line after it — and exist to show that a
+conforming document need not be a canonical one.
 
 ## Usage
 
@@ -77,6 +76,13 @@ implementation does in the meantime:
 
 Each is a position taken to make the code run, not a reading the specification
 endorses. Where one turns out to be wrong, the fix is upstream first.
+
+**One place the specification decides and the decision is known to be wrong.**
+`L-10` recognises front matter by position, so a document that opens with a
+thematic break and carries a later one is swallowed whole and a heading inside it
+stops being a node. This implementation reproduces that faithfully rather than
+guarding against it, because a guard is a Normative change and belongs upstream:
+[spec#35](https://github.com/mindmapmarkdown/spec/issues/35).
 
 ## Layout
 

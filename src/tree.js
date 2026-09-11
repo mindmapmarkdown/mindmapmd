@@ -67,12 +67,15 @@ export function ordered(tree) {
 
 export const stringify = (tree) => JSON.stringify(ordered(tree))
 
-// ── S-1, S-2 · well-formedness ──────────────────────────────────────
+// ── S-1, S-2, S-4 · well-formedness ─────────────────────────────────
 
 export const MAX_SECTION_DEPTH = 6
 
+export const FRONT_MATTER = 'front_matter'
+
 /**
- * Every way `tree` fails S-1 or S-2, as sentences. Empty means well-formed.
+ * Every way `tree` fails S-1, S-2 or S-4, as sentences. Empty means
+ * well-formed.
  *
  * Reported rather than thrown, because S-3 requires an implementation to
  * reject such a tree and a caller deserves to be told everything that is wrong
@@ -80,9 +83,27 @@ export const MAX_SECTION_DEPTH = 6
  */
 export function problems(tree) {
   const found = []
+
+  // S-4 — a front_matter entry MUST be the first entry of the root's content,
+  // and MUST NOT appear anywhere else. Front matter is defined by its position
+  // in the document (L-10), so an entry elsewhere encodes a tree no document
+  // lifts to and P-11 could not write back.
+  const matter = (n, path, isRoot) => {
+    for (const [i, entry] of n.content.entries()) {
+      if (entry.block !== FRONT_MATTER) continue
+      if (isRoot && i === 0) continue
+      found.push(
+        `S-4: front_matter entry at ${path}/content/${i}, which is not the first ` +
+          `entry of the root's content`,
+      )
+    }
+  }
+  matter(tree, '', true)
+
   const walk = (n, path, sectionDepth, underItem) => {
     for (const [i, child] of n.children.entries()) {
       const at = `${path}/${i}`
+      matter(child, at, false)
       if (child.kind === 'section') {
         // S-1 — a section MUST NOT have an item ancestor
         if (underItem) {
