@@ -17,8 +17,8 @@ const parser = new Parser()
  * trailing spaces is silently destroyed by an editor that trims them.
  *
  * Applied only where inline content lives. A code block's trailing spaces are
- * not a line break and must survive; see the note in README on where this
- * leaves P-8.
+ * not a line break and must survive — which P-8, as written, forbids in
+ * canonical output. RFC 0038 part 3 proposes exempting code block content.
  */
 const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
 const hardBreaks = (text) => text.replace(/[ ]{2,}\n/g, '\\\n')
@@ -58,8 +58,85 @@ function frontMatter(markdown) {
   return null
 }
 
-/** Verbatim source of a block, from its source position. E-5. */
+/**
+ * Remove up to `k` columns of leading whitespace from `line`. Tabs advance to
+ * the next multiple of four, as CommonMark counts them; a tab that would cross
+ * column `k` leaves behind the spaces that fall past it.
+ */
+function stripColumns(line, k) {
+  let col = 0
+  let i = 0
+  while (col < k && i < line.length) {
+    if (line[i] === ' ') {
+      col++
+      i++
+    } else if (line[i] === '\t') {
+      const next = col + (4 - (col % 4))
+      if (next > k) return ' '.repeat(next - k) + line.slice(i + 1)
+      col = next
+      i++
+    } else {
+      break
+    }
+  }
+  return line.slice(i)
+}
+
+/**
+ * The lines a block occupies, as written, with no line losing more than the
+ * first did. The first line is cut at the column where the block begins; every
+ * later line loses up to that many columns of leading whitespace.
+ *
+ * PROTOTYPE for RFC 0038 part 1. Before it, later lines kept the indentation of
+ * the list item that contains the block, projection added the item's
+ * indentation again, and any multi-line block inside a list item failed the
+ * tree round-trip.
+ */
+function linesOf(n, lines) {
+  const [[sl, sc], [el, ec]] = n.sourcepos
+  if (sl === el) return lines[sl - 1].slice(sc - 1, ec)
+  const k = sc - 1
+  const out = [lines[sl - 1].slice(k)]
+  for (let i = sl; i < el - 1; i++) out.push(stripColumns(lines[i], k))
+  out.push(stripColumns(lines[el - 1].slice(0, ec), k))
+  return out.join('\n')
+}
+
+/**
+ * PROTOTYPE for RFC 0038 part 2 — a code block, fenced or indented, is recorded
+ * in the one form P-5 permits.
+ *
+ * The content is CommonMark's own: the lines between the fences, or the lines of
+ * an indented block, with the indentation CommonMark removes already removed —
+ * including a list item's. The fence is backticks, or tildes when the info
+ * string holds a backtick (a backtick fence cannot carry one); its length is
+ * three, or one more than the longest run of that character in the content.
+ */
+function codeSourceOf(n, lines) {
+  const content = n.literal ?? ''
+  let info = ''
+  if (n.info != null) {
+    // The info string as written, not CommonMark's unescaped `info`: an escape or
+    // an entity in it is part of what the author wrote.
+    const first = lines[n.sourcepos[0][0] - 1].slice(n.sourcepos[0][1] - 1)
+    info = first.replace(/^ *(`{3,}|~{3,})/, '').trim()
+  }
+  const char = info.includes('`') ? '~' : '`'
+  const runs = content.match(char === '`' ? /`+/g : /~+/g) ?? []
+  const fence = char.repeat(Math.max(3, 1 + runs.reduce((m, r) => Math.max(m, r.length), 0)))
+  const body = content === '' ? [] : content.replace(/\n$/, '').split('\n')
+  return [fence + info, ...body, fence].join('\n')
+}
+
+/** Source of a block recorded as node content. E-5. */
 function sourceOf(n, lines) {
+  if (n.type === 'code_block') return codeSourceOf(n, lines)
+  const text = linesOf(n, lines)
+  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+}
+
+/** Source of a heading or item label, unchanged by the prototype. */
+function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   let text
   if (sl === el) {
@@ -81,7 +158,7 @@ function sourceOf(n, lines) {
  * setext heading loses its underline.
  */
 function labelOf(n, lines) {
-  const text = sourceOf(n, lines)
+  const text = rawSourceOf(n, lines)
   if (n.type !== 'heading') return text.trim()
   return text
     .replace(/^#{1,6}[ \t]*/, '')
