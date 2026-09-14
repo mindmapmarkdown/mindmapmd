@@ -23,6 +23,41 @@ const parser = new Parser()
 const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
 const hardBreaks = (text) => text.replace(/[ ]{2,}\n/g, '\\\n')
 
+/**
+ * L-10 — front matter. A document opening with a line of exactly three hyphens
+ * and carrying a later such line holds that run of lines as one opaque block.
+ *
+ * It is taken off before the parser sees the text rather than found afterwards,
+ * because CommonMark does not read it as one block at all: the opening fence is
+ * a thematic break and the closing fence, following a paragraph, is a setext
+ * heading underline — so the parser hands back a heading whose text is the
+ * block's contents, and L-1 makes a node of it.
+ *
+ * Trailing spaces and tabs come off each line, for the reason L-9 exists: P-9
+ * writes the recorded source back and P-8 forbids a line ending in whitespace.
+ *
+ * Nothing here parses the block. It is opaque text at a known position.
+ *
+ * @returns {{source: string, rest: string}|null} null when there is no front
+ *   matter, in which case the first line is read as CommonMark reads it.
+ */
+const FRONT_MATTER_FENCE = /^---[ \t]*$/
+function frontMatter(markdown) {
+  const all = markdown.split('\n')
+  if (!FRONT_MATTER_FENCE.test(all[0] ?? '')) return null
+  for (let i = 1; i < all.length; i++) {
+    if (!FRONT_MATTER_FENCE.test(all[i])) continue
+    return {
+      source: all
+        .slice(0, i + 1)
+        .map((line) => line.replace(/[ \t]+$/, ''))
+        .join('\n'),
+      rest: all.slice(i + 1).join('\n'),
+    }
+  }
+  return null
+}
+
 /** Verbatim source of a block, from its source position. E-5. */
 function sourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
@@ -67,9 +102,16 @@ function labelOf(n, lines) {
 export function lift(markdown) {
   if (typeof markdown !== 'string') throw new TypeError('lift expects a string')
 
-  const lines = markdown.replace(/\n$/, '').split('\n')
-  const doc = parser.parse(markdown)
+  // L-10 — front matter is the root's first content entry and produces no node.
+  // Everything after it is an ordinary document, and the line numbers the parser
+  // reports are line numbers in that remainder.
+  const matter = frontMatter(markdown)
+  const text = matter ? matter.rest : markdown
+
+  const lines = text.replace(/\n$/, '').split('\n')
+  const doc = parser.parse(text)
   const tree = root()
+  if (matter) tree.content.push(block('front_matter', matter.source))
 
   // Sections open and close by nesting, not by level (L-5).
   const open = []

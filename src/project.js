@@ -53,7 +53,14 @@ const indent = (text, pad) =>
 export function project(tree) {
   assertWellFormed(tree) // S-3 — reject, never coerce
 
-  /** Blocks of a node's own content, then its children. P-10. */
+  /**
+   * Blocks of a node's own content, then its children. P-10.
+   *
+   * P-11 needs no code of its own here. S-4, enforced above, puts a
+   * `front_matter` entry first in the root's content and nowhere else, so this
+   * writes it at the first line of the document, and the `\n\n` join below is
+   * the single blank line P-11 asks for after it.
+   */
   const body = (n, sectionDepth) => {
     const out = [...contentBlocks(n.content)]
     for (const run of runs(n.children)) {
