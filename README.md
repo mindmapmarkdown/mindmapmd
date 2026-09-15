@@ -56,6 +56,12 @@ that is not well-formed, and never coerces the offending nodes to `item` — S-3
 requires refusal, because silent coercion produces a document that lifts to a
 *different* tree from the one projected.
 
+On this branch that includes S-7, proposed by
+[RFC 0043](https://github.com/mindmapmarkdown/spec/pull/43): a tree whose
+projection would lift to a different tree is rejected too. An item labelled
+`1. Install` is one — its projection `- 1. Install` is an empty item holding a
+numbered list. `1\. Install` is a different label, and a well-formed one.
+
 ## Design
 
 **CommonMark is not reimplemented.** §1.5.1 layers the specification on
@@ -90,7 +96,8 @@ guarding against it, because a guard is a Normative change and belongs upstream:
 |---|---|
 | `src/lift.js` | §2.2, §2.3 — what becomes a node, and at what depth |
 | `src/project.js` | §2.5 — canonical projection |
-| `src/tree.js` | §2.6 — the encoding, E-7 equality, S-1/S-2 well-formedness |
+| `src/tree.js` | §2.6 — the encoding, E-7 equality, S-1/S-2/S-4 structure |
+| `src/wellformed.js` | §2.4 — the structural rules plus S-7, and S-3's rejection |
 | `test/conformance.test.js` | the suite, run against all of the above |
 | `test/fixtures/examples.json` | generated from `spec.md`; **never hand-edited** |
 

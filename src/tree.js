@@ -2,7 +2,9 @@
 //
 // A tree is an abstract structure. This module holds the one notation the
 // specification defines for it — the fixture encoding of §2.6 — together with
-// the equality E-7 requires and the well-formedness S-1 and S-2 demand.
+// the equality E-7 requires and the structural rules of §2.4. Whether a tree is
+// well-formed also depends on S-7, which needs lift and projection; see
+// wellformed.js.
 //
 // Licensed under Apache-2.0. See LICENSE.
 
@@ -67,21 +69,21 @@ export function ordered(tree) {
 
 export const stringify = (tree) => JSON.stringify(ordered(tree))
 
-// ── S-1, S-2, S-4 · well-formedness ─────────────────────────────────
+// ── S-1, S-2, S-4 · structure ───────────────────────────────────────
 
 export const MAX_SECTION_DEPTH = 6
 
 export const FRONT_MATTER = 'front_matter'
 
 /**
- * Every way `tree` fails S-1, S-2 or S-4, as sentences. Empty means
- * well-formed.
+ * Every way `tree` fails S-1, S-2 or S-4, as sentences. Empty means the
+ * structure is sound; wellformed.js adds S-7.
  *
  * Reported rather than thrown, because S-3 requires an implementation to
  * reject such a tree and a caller deserves to be told everything that is wrong
  * with it rather than only the first thing.
  */
-export function problems(tree) {
+export function structuralProblems(tree) {
   const found = []
 
   // S-4 — a front_matter entry MUST be the first entry of the root's content,
@@ -122,15 +124,4 @@ export function problems(tree) {
   }
   walk(tree, '', 0, false)
   return found
-}
-
-export const wellFormed = (tree) => problems(tree).length === 0
-
-/** S-3 — reject, and never coerce the offending nodes to `item`. */
-export function assertWellFormed(tree) {
-  const found = problems(tree)
-  if (found.length) {
-    throw new Error(`tree is not well-formed (spec.md §2.4):\n  ${found.join('\n  ')}`)
-  }
-  return tree
 }
