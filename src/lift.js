@@ -117,9 +117,27 @@ export function lift(markdown) {
   const open = []
   const current = () => (open.length ? open[open.length - 1].node : tree)
 
+  // L-3 — a block attaches to the nearest node preceding it in document order.
+  // That is the most recently created node: after a heading, its section; after
+  // a list, the list's deepest last item, because items are created before the
+  // lists nested in them. PROTOTYPE (RFC 0039): before this, a block after a
+  // list attached to the open section instead, contrary to L-3 as written.
+  let last = null
+
   const items = (list, parent, inItem) => {
+    // PROTOTYPE L-12 (RFC 0039) — an item of an ordered list records the number
+    // CommonMark gives it and its delimiter. The number is the list's start plus
+    // the item's position in that CommonMark list; the numbers written on later
+    // items are ignored by CommonMark and are not recorded.
+    const ordered = list.listType === 'ordered'
+    let ordinal = ordered ? list.listStart : null
     for (let li = list.firstChild; li; li = li.next) {
       const item = node('item', '')
+      if (ordered) {
+        item.ordinal = ordinal++
+        item.delimiter = list.listDelimiter
+      }
+      last = item
       let labelled = false
       for (let b = li.firstChild; b; b = b.next) {
         if (b.type === 'list') {
@@ -142,7 +160,9 @@ export function lift(markdown) {
           labelled = true
           continue
         }
-        item.content.push(block(b.type, sourceOf(b, lines))) // L-3
+        // L-3 — attached to the nearest node preceding it: this item, or, after a
+        // list nested in this item, that list's deepest last item
+        last.content.push(block(b.type, sourceOf(b, lines)))
       }
       parent.children.push(item)
     }
@@ -156,12 +176,13 @@ export function lift(markdown) {
       const section = node('section', labelOf(b, lines)) // L-2
       current().children.push(section)
       open.push({ level: b.level, node: section })
+      last = section
     } else if (b.type === 'list') {
       items(b, current(), false)
     } else {
       // L-3 — every other block is content, attached to the nearest node
       // preceding it; content before any node attaches to the root
-      current().content.push(block(b.type, sourceOf(b, lines)))
+      ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines)))
     }
   }
 

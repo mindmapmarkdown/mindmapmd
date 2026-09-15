@@ -3,7 +3,7 @@
 //
 // Licensed under Apache-2.0. See LICENSE.
 
-import { assertWellFormed } from './tree.js'
+import { MAX_ORDINAL, assertWellFormed, deepestLast, listsOf, restarts } from './tree.js'
 
 /** P-5, P-9 — a code block comes back fenced with backticks, whatever it was. */
 function fenced(source) {
@@ -21,13 +21,7 @@ const longestRun = (s) => (s.match(/`+/g) ?? ['']).reduce((n, r) => Math.max(n, 
 const contentBlocks = (content) =>
   content.map((e) => (e.block === 'code_block' ? fenced(e.source) : e.source))
 
-/**
- * Whether a run of sibling items is loose. P-7 — a list MUST be tight unless an
- * item carries block content, in which case the list MUST be loose.
- */
-const loose = (run) => run.some((item) => item.content.length > 0)
-
-/** Split children into runs, so that each maximal run of items is one list. */
+/** Split children into runs, so that each maximal run of items is one run. */
 function runs(children) {
   const out = []
   for (const child of children) {
@@ -43,6 +37,19 @@ const indent = (text, pad) =>
     .split('\n')
     .map((line) => (line.length ? pad + line : line)) // P-8 — no line ends in whitespace
     .join('\n')
+
+/**
+ * PROTOTYPE P-3 (RFC 0039) — a bullet item's marker is `-`; an ordered item's is
+ * its ordinal followed by its delimiter. CommonMark reads only the first item's
+ * number, and a marker may carry at most nine digits, so a later item whose
+ * ordinal has outgrown that writes the largest number that fits: its ordinal is
+ * implied by the first item's, and the written digits are not read.
+ */
+const markerOf = (item) =>
+  item.ordinal === undefined ? '-' : `${Math.min(item.ordinal, MAX_ORDINAL)}${item.delimiter}`
+
+/** A marker and its label; an empty label is the bare marker (P-8). */
+const marked = (marker, label) => (label ? `${marker} ${label}` : marker)
 
 /**
  * Project a tree to its canonical Markdown document.
@@ -67,7 +74,7 @@ export function project(tree) {
       if (run.kind === 'section') {
         for (const section of run.nodes) out.push(...sectionOf(section, sectionDepth + 1))
       } else {
-        out.push(list(run.nodes, sectionDepth))
+        out.push(listRun(run.nodes))
       }
     }
     return out
@@ -75,30 +82,74 @@ export function project(tree) {
 
   /** P-1, P-2, P-6 — a section is an ATX heading whose level is its depth. */
   const sectionOf = (n, depth) => {
-    const heading = `${'#'.repeat(Math.min(depth, 6))} ${n.label}`
+    const heading = marked('#'.repeat(Math.min(depth, 6)), n.label)
     return [heading, ...body(n, depth)]
   }
 
   /**
-   * P-3, P-4 — one list, marker `-`, each nesting level indented by exactly two
-   * spaces relative to its parent item's marker.
+   * Nodes whose content is written after their list rather than inside it —
+   * PROTOTYPE P-12 (RFC 0039). Filled while a run is written.
    */
-  const list = (nodes, sectionDepth) => {
-    const sep = loose(nodes) ? '\n\n' : '\n'
+  const detached = new Set()
+
+  /**
+   * A run of sibling items, written as the CommonMark lists it divides into
+   * (`listsOf`). Two adjacent lists that CommonMark would otherwise merge — an
+   * ordered list that restarts its numbering with the same delimiter — are kept
+   * apart by writing the content of the nearest node preceding the second list,
+   * which is the first list's deepest last item, unindented between them. L-3
+   * attaches that content back to the same node, and it ends the first list.
+   */
+  const listRun = (nodes) => {
+    const groups = listsOf(nodes)
+    const pieces = []
+    for (const [i, group] of groups.entries()) {
+      if (i > 0 && restarts(groups[i - 1], group)) {
+        const d = deepestLast(groups[i - 1][groups[i - 1].length - 1])
+        detached.add(d)
+      }
+    }
+    for (const [i, group] of groups.entries()) {
+      pieces.push(list(group))
+      const next = groups[i + 1]
+      if (next && restarts(group, next)) {
+        const d = deepestLast(group[group.length - 1])
+        pieces.push(contentBlocks(d.content).join('\n\n'))
+      }
+    }
+    // Adjacent lists of different kinds are separated by a blank line: without
+    // one, an ordered item whose number is not 1 would read as a lazy
+    // continuation of the item above it.
+    return pieces.join('\n\n')
+  }
+
+  /** The content an item writes inside its own list. */
+  const ownContent = (item) => (detached.has(item) ? [] : contentBlocks(item.content))
+
+  /**
+   * One CommonMark list. P-4 (as amended by RFC 0039) — an item's content and
+   * nested lists are indented by the width of its marker plus one space: two for
+   * `-`, three for `1.`, four for `10.`. P-7 — tight unless an item carries block
+   * content in the list.
+   */
+  const list = (nodes) => {
+    const sep = nodes.some((item) => ownContent(item).length > 0) ? '\n\n' : '\n'
     return nodes
       .map((item) => {
-        const own = contentBlocks(item.content)
+        const marker = markerOf(item)
+        const pad = ' '.repeat(marker.length + 1)
+        const own = ownContent(item)
         const nested = runs(item.children)
           .filter((r) => r.kind === 'item')
-          .map((r) => list(r.nodes, sectionDepth))
-        const head = `- ${item.label}`
+          .map((r) => listRun(r.nodes))
+        const head = marked(marker, item.label)
         if (!own.length && !nested.length) return head
         // A nested list under an item with no content of its own follows
         // immediately: P-7 asks for a blank line between *blocks of content*,
         // and a sublist is not one. Content, when present, is a block and takes
         // its blank lines.
-        if (!own.length) return `${head}\n${indent(nested.join('\n'), '  ')}`
-        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), '  ')}`
+        if (!own.length) return `${head}\n${indent(nested.join('\n'), pad)}`
+        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), pad)}`
       })
       .join(sep)
   }
