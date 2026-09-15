@@ -59,16 +59,33 @@ test('P-8 · an empty item whose first block was a list', () => {
   holds(lift('- - x\n'), '-\n  - x\n')
 })
 
-test(
-  'an empty item as the first child of a labelled item',
-  {
-    todo:
-      'no spelling round-trips under P-7: `- a` then `  -` is a setext heading ' +
-      'underline, with or without a trailing space, and a blank line between ' +
-      'them makes the list loose — open spec question',
-  },
-  () => {
-    const tree = lift('- a\n\n  -\n') // a conforming document reaches this tree
-    assert.ok(equal(lift(project(tree)), tree))
-  },
-)
+// PROTOTYPE (RFC 0046, mindmapmarkdown/spec#45) — an empty item as the first
+// child of a labelled item. Under P-7 as written no spelling round-trips: `- a`
+// then `  -` is a setext heading underline. The proposed exception puts one blank
+// line between the label and the nested list.
+
+test('RFC 0046 · an empty first child is separated from the label by a blank line', () => {
+  holds(lift('- a\n\n  -\n'), '- a\n\n  -\n')
+})
+
+test('RFC 0046 · siblings after it stay tight', () => {
+  holds(lift('- a\n\n  -\n- b\n'), '- a\n\n  -\n- b\n')
+  holds(root([item('a', [item(''), item('c')]), item('b')]), '- a\n\n  -\n  - c\n- b\n')
+})
+
+test('RFC 0046 · an empty first child with children of its own', () => {
+  holds(lift('- a\n\n  -\n    - b\n'), '- a\n\n  -\n    - b\n')
+})
+
+test('RFC 0046 · at any depth', () => {
+  holds(lift('- x\n  - a\n\n    -\n'), '- x\n  - a\n\n    -\n')
+  holds(root([section('S', [item('a', [item('')])])]), '# S\n\n- a\n\n  -\n')
+})
+
+test('RFC 0046 · not when the empty item is not the first child', () => {
+  holds(root([item('a', [item('b'), item('')])]), '- a\n  - b\n  -\n')
+})
+
+test('RFC 0046 · not when the parent label is empty too', () => {
+  holds(root([item('', [item('')])]), '-\n  -\n')
+})
