@@ -208,8 +208,18 @@ export function lift(markdown) {
   let last = null
 
   const items = (list, parent, inItem) => {
+    // PROTOTYPE L-12 (RFC 0039) — an item of an ordered list records the number
+    // CommonMark gives it and its delimiter. The number is the list's start plus
+    // the item's position in that CommonMark list; the numbers written on later
+    // items are ignored by CommonMark and are not recorded.
+    const ordered = list.listType === 'ordered'
+    let ordinal = ordered ? list.listStart : null
     for (let li = list.firstChild; li; li = li.next) {
       const item = node('item', '')
+      if (ordered) {
+        item.ordinal = ordinal++
+        item.delimiter = list.listDelimiter
+      }
       last = item
       let labelled = false
       for (let b = li.firstChild; b; b = b.next) {
