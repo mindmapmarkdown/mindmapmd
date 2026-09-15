@@ -3,7 +3,8 @@
 //
 // Licensed under Apache-2.0. See LICENSE.
 
-import { MAX_ORDINAL, assertWellFormed, deepestLast, listsOf, restarts } from './tree.js'
+import { MAX_ORDINAL, deepestLast, listsOf, restarts } from './tree.js'
+import { assertWellFormed } from './wellformed.js'
 
 /** P-5, P-9 — a code block comes back fenced with backticks, whatever it was. */
 function fenced(source) {
@@ -65,12 +66,22 @@ const markerOf = (item) =>
  * @returns {string} the document, ending in exactly one line feed (P-8)
  */
 export function project(tree) {
-  assertWellFormed(tree) // S-3 — reject, never coerce
+  return write(assertWellFormed(tree)) // S-3 — reject, never coerce
+}
 
+/**
+ * The writing half of projection, with no well-formedness check. S-7 asks
+ * whether a tree's projection lifts back to it, so checking S-7 has to project
+ * without first checking S-7. Nothing else should call this.
+ *
+ * @param {{content: Array, children: Array}} tree
+ * @returns {string}
+ */
+export function write(tree) {
   /**
    * Blocks of a node's own content, then its children. P-10.
    *
-   * P-11 needs no code of its own here. S-4, enforced above, puts a
+   * P-11 needs no code of its own here. S-4, enforced by project, puts a
    * `front_matter` entry first in the root's content and nowhere else, so this
    * writes it at the first line of the document, and the `\n\n` join below is
    * the single blank line P-11 asks for after it.
