@@ -79,14 +79,21 @@ function sourceOf(n, lines) {
  *
  * The marker is not inline content, so an ATX heading loses its hashes and a
  * setext heading loses its underline.
+ *
+ * An ATX heading's closing sequence is a run of `#` that is the whole content or
+ * is preceded by a space or tab. A `#` escaped with a backslash is not part of
+ * one: CommonMark reads `## Title \#` as the heading text `Title #`, so the label
+ * is `Title \#`, and `# C#` keeps its `#` because nothing separates it.
  */
+const ATX_OPENER = /^[ ]{0,3}#{1,6}(?=[ \t]|$)/
+
 function labelOf(n, lines) {
   const text = sourceOf(n, lines)
   if (n.type !== 'heading') return text.trim()
+  if (!ATX_OPENER.test(text)) return text.replace(/\n[ ]{0,3}(=+|-+)[ \t]*$/, '').trim()
   return text
-    .replace(/^#{1,6}[ \t]*/, '')
-    .replace(/[ \t]*#*[ \t]*$/, '')
-    .replace(/\n[=\-]+[ \t]*$/, '')
+    .replace(ATX_OPENER, '')
+    .replace(/(^|[ \t])#+[ \t]*$/, '')
     .trim()
 }
 
