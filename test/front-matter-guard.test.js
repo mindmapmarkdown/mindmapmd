@@ -36,6 +36,15 @@ test('the reported shape is not front matter', () => {
   assert.deepEqual(blocks(md), ['thematic_break', 'paragraph', 'thematic_break', 'paragraph'])
 })
 
+test('a note that opens with three rules', () => {
+  // spec#35, reported on the issue itself: notes that open this way, which the
+  // author takes for an unused YAML block left behind plus a rule of his own
+  const md = '---\n\n---\n\n---\n\n…content\n'
+  assert.equal(matter(md), undefined)
+  assert.deepEqual(blocks(md), ['thematic_break', 'thematic_break', 'thematic_break', 'paragraph'])
+  assert.equal(project(lift(md)), md)
+})
+
 test('the prose in it stays prose, and the document round-trips', () => {
   const md = '---\n\nOpening note.\n\n---\n\n# Heading\n\nBody.\n'
   const tree = lift(md)
