@@ -38,6 +38,14 @@ function runs(children) {
   return out
 }
 
+/**
+ * A heading or list item line: its marker, then its label. An empty label is
+ * the bare marker — `-` is an empty list item and `##` an empty ATX heading in
+ * CommonMark, whereas the space before an empty label would end the line in
+ * whitespace, which P-8 forbids.
+ */
+const marked = (marker, label) => (label ? `${marker} ${label}` : marker)
+
 const indent = (text, pad) =>
   text
     .split('\n')
@@ -75,7 +83,7 @@ export function project(tree) {
 
   /** P-1, P-2, P-6 — a section is an ATX heading whose level is its depth. */
   const sectionOf = (n, depth) => {
-    const heading = `${'#'.repeat(Math.min(depth, 6))} ${n.label}`
+    const heading = marked('#'.repeat(Math.min(depth, 6)), n.label)
     return [heading, ...body(n, depth)]
   }
 
@@ -91,7 +99,7 @@ export function project(tree) {
         const nested = runs(item.children)
           .filter((r) => r.kind === 'item')
           .map((r) => list(r.nodes, sectionDepth))
-        const head = `- ${item.label}`
+        const head = marked('-', item.label)
         if (!own.length && !nested.length) return head
         // A nested list under an item with no content of its own follows
         // immediately: P-7 asks for a blank line between *blocks of content*,

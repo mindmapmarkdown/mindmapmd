@@ -156,14 +156,21 @@ function rawSourceOf(n, lines) {
  *
  * The marker is not inline content, so an ATX heading loses its hashes and a
  * setext heading loses its underline.
+ *
+ * An ATX heading's closing sequence is a run of `#` that is the whole content or
+ * is preceded by a space or tab. A `#` escaped with a backslash is not part of
+ * one: CommonMark reads `## Title \#` as the heading text `Title #`, so the label
+ * is `Title \#`, and `# C#` keeps its `#` because nothing separates it.
  */
+const ATX_OPENER = /^[ ]{0,3}#{1,6}(?=[ \t]|$)/
+
 function labelOf(n, lines) {
   const text = rawSourceOf(n, lines)
   if (n.type !== 'heading') return text.trim()
+  if (!ATX_OPENER.test(text)) return text.replace(/\n[ ]{0,3}(=+|-+)[ \t]*$/, '').trim()
   return text
-    .replace(/^#{1,6}[ \t]*/, '')
-    .replace(/[ \t]*#*[ \t]*$/, '')
-    .replace(/\n[=\-]+[ \t]*$/, '')
+    .replace(ATX_OPENER, '')
+    .replace(/(^|[ \t])#+[ \t]*$/, '')
     .trim()
 }
 
@@ -194,9 +201,16 @@ export function lift(markdown) {
   const open = []
   const current = () => (open.length ? open[open.length - 1].node : tree)
 
+  // L-3 — a block attaches to the nearest node preceding it in document order.
+  // That is the most recently created node: after a heading, its section; after
+  // a list, the list's deepest last item, because an item is created before the
+  // list nested in it. Content before any node attaches to the root.
+  let last = null
+
   const items = (list, parent, inItem) => {
     for (let li = list.firstChild; li; li = li.next) {
       const item = node('item', '')
+      last = item
       let labelled = false
       for (let b = li.firstChild; b; b = b.next) {
         if (b.type === 'list') {
@@ -219,7 +233,9 @@ export function lift(markdown) {
           labelled = true
           continue
         }
-        item.content.push(block(b.type, sourceOf(b, lines))) // L-3
+        // L-3 — this item, or, after a list nested in this item, that list's
+        // deepest last item
+        last.content.push(block(b.type, sourceOf(b, lines)))
       }
       parent.children.push(item)
     }
@@ -233,12 +249,13 @@ export function lift(markdown) {
       const section = node('section', labelOf(b, lines)) // L-2
       current().children.push(section)
       open.push({ level: b.level, node: section })
+      last = section
     } else if (b.type === 'list') {
       items(b, current(), false)
     } else {
       // L-3 — every other block is content, attached to the nearest node
       // preceding it; content before any node attaches to the root
-      current().content.push(block(b.type, sourceOf(b, lines)))
+      ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines)))
     }
   }
 
