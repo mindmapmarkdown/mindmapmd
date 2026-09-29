@@ -175,6 +175,59 @@ function labelOf(n, lines) {
 }
 
 /**
+ * PROTOTYPE (RFC 0051, spec#40) — the lines of a link reference definition.
+ *
+ * CommonMark takes a definition out of the document before it builds the tree:
+ * the parser reports no node for it, and the blocks around it report source
+ * positions that skip its lines. Those skipped lines are what this finds — every
+ * line no block covers and that is not blank. In a conforming document nothing
+ * else can be there, because every other construct is a block.
+ *
+ * Container blocks are not counted as cover: a list item's range spans the
+ * definition inside it, which is the gap being looked for.
+ */
+const CONTAINERS = new Set(['document', 'list', 'item', 'block_quote'])
+const NON_BLANK = /\S/
+
+function definitionRuns(doc, lines) {
+  const covered = new Set()
+  const walk = (n) => {
+    for (let c = n.firstChild; c; c = c.next) {
+      if (!c.sourcepos) continue
+      if (CONTAINERS.has(c.type)) {
+        // Only the marker line: the rest of a container's range is its children
+        // and the gaps between them, and a gap is what is being looked for. The
+        // marker line itself is covered, or an empty item — a bare `-` — would
+        // read as a definition.
+        covered.add(c.sourcepos[0][0])
+      } else {
+        for (let i = c.sourcepos[0][0]; i <= c.sourcepos[1][0]; i++) covered.add(i)
+      }
+      walk(c)
+    }
+  }
+  walk(doc)
+
+  const runs = []
+  for (let i = 1; i <= lines.length; i++) {
+    if (covered.has(i) || !NON_BLANK.test(lines[i - 1])) continue
+    const start = i
+    while (i + 1 <= lines.length && !covered.has(i + 1) && NON_BLANK.test(lines[i])) i++
+    runs.push({ start, end: i })
+  }
+  return runs
+}
+
+/** A definition's source, with its container's indentation removed (E-5). */
+function runSource(run, lines) {
+  const first = lines[run.start - 1]
+  const k = first.length - first.replace(/^[ \t]+/, '').length
+  const out = []
+  for (let i = run.start; i <= run.end; i++) out.push(stripColumns(lines[i - 1], k))
+  return out.join('\n')
+}
+
+/**
  * Lift a document to the tree this specification prescribes for it.
  *
  * L-8 — a function of the document text alone. Nothing here resolves, fetches,
@@ -207,12 +260,28 @@ export function lift(markdown) {
   // list nested in it. Content before any node attaches to the root.
   let last = null
 
+  // PROTOTYPE (RFC 0051) — definitions are attached where L-3 puts any block:
+  // to the nearest node preceding them. The runs come in document order, so
+  // emitting every run that begins before the block about to be read does it.
+  const definitions = definitionRuns(doc, lines)
+  let pending = 0
+  const definitionsBefore = (line) => {
+    while (pending < definitions.length && definitions[pending].start < line) {
+      const run = definitions[pending++]
+      ;(last ?? tree).content.push(block('link_reference_definition', runSource(run, lines)))
+    }
+  }
+
   const items = (list, parent, inItem) => {
     for (let li = list.firstChild; li; li = li.next) {
+      // A definition inside the item before this one precedes it in document
+      // order, so it is emitted before this item becomes the node L-3 sees.
+      definitionsBefore(li.sourcepos[0][0])
       const item = node('item', '')
       last = item
       let labelled = false
       for (let b = li.firstChild; b; b = b.next) {
+        definitionsBefore(b.sourcepos[0][0])
         if (b.type === 'list') {
           items(b, item, true) // L-7 — depth is nesting within the list
           continue
@@ -243,6 +312,7 @@ export function lift(markdown) {
   }
 
   for (let b = doc.firstChild; b; b = b.next) {
+    definitionsBefore(b.sourcepos[0][0])
     if (b.type === 'heading') {
       // L-5 — a heading at or below the open section's level closes it
       while (open.length && open[open.length - 1].level >= b.level) open.pop()
@@ -258,6 +328,7 @@ export function lift(markdown) {
       ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines)))
     }
   }
+  definitionsBefore(Infinity) // a definition after every block
 
   return tree
 }
