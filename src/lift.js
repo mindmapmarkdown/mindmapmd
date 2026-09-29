@@ -186,7 +186,11 @@ function labelOf(n, lines) {
  * Container blocks are not counted as cover: a list item's range spans the
  * definition inside it, which is the gap being looked for.
  */
-const CONTAINERS = new Set(['document', 'list', 'item', 'block_quote'])
+// A list and its items are structure — each item becomes a node, and a gap
+// between them is where a definition can hide. Every other block is recorded
+// with its source intact, a block quote included, so a definition written inside
+// one is already part of what is recorded and is not a gap.
+const STRUCTURE = new Set(['list', 'item'])
 const NON_BLANK = /\S/
 
 function definitionRuns(doc, lines) {
@@ -194,11 +198,11 @@ function definitionRuns(doc, lines) {
   const walk = (n) => {
     for (let c = n.firstChild; c; c = c.next) {
       if (!c.sourcepos) continue
-      if (CONTAINERS.has(c.type)) {
-        // Only the marker line: the rest of a container's range is its children
-        // and the gaps between them, and a gap is what is being looked for. The
-        // marker line itself is covered, or an empty item — a bare `-` — would
-        // read as a definition.
+      if (STRUCTURE.has(c.type)) {
+        // Only the marker line: the rest of a list's range is its items and the
+        // gaps between them, and a gap is what is being looked for. The marker
+        // line itself is covered, or an empty item — a bare `-` — would read as
+        // a definition.
         covered.add(c.sourcepos[0][0])
       } else {
         for (let i = c.sourcepos[0][0]; i <= c.sourcepos[1][0]; i++) covered.add(i)

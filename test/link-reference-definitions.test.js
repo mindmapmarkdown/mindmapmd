@@ -85,6 +85,25 @@ test('an empty item is still an empty item, not a definition', () => {
   assert.deepEqual(entries(tree.children[1]), [])
 })
 
+test('a definition inside a block quote stays inside the quote', () => {
+  // The quote's own source holds it, so it is not a gap to be recovered.
+  const tree = roundTrips('# Guide\n\n> [x]: /x\n>\n> Quoted.\n')
+  assert.deepEqual(entries(tree.children[0]), [['block_quote', '> [x]: /x\n>\n> Quoted.']])
+})
+
+test('a definition after a block quote is the node’s content', () => {
+  const tree = roundTrips('# Guide\n\n> Quoted.\n\n[x]: /x\n')
+  assert.deepEqual(entries(tree.children[0]), [
+    ['block_quote', '> Quoted.'],
+    [DEF, '[x]: /x'],
+  ])
+})
+
+test('a definition inside a code block is code', () => {
+  const tree = roundTrips('# Guide\n\n```\n[x]: /x\n```\n')
+  assert.deepEqual(entries(tree.children[0]), [['code_block', '```\n[x]: /x\n```']])
+})
+
 test('a document with no definition is unchanged', () => {
   const tree = lift('# Guide\n\nText.\n\n- a\n')
   assert.deepEqual(entries(tree.children[0]), [['paragraph', 'Text.']])
