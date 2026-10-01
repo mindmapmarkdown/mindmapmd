@@ -29,16 +29,16 @@ node --test test/*.test.js
 
 | | |
 |---|---|
-| Lift — every example in the suite | **21 / 21** |
-| Tree round-trip — project, lift back, compare | **21 / 21** |
-| Byte identity, where the example is canonical | **17 / 17** |
+| Lift — every example in the suite | **25 / 25** |
+| Tree round-trip — project, lift back, compare | **25 / 25** |
+| Byte identity, where the example is canonical | **19 / 19** |
 | Idempotence — the second round-trip is byte-stable | **pass** |
 
-**17 of the 21 examples are canonical**, so byte identity is tested on those
-seventeen and nowhere else. The other four are deliberately non-canonical — a
-setext heading, a hard break spelled with trailing spaces, a skipped heading
-level, and a heading with no blank line after it — and exist to show that a
-conforming document need not be a canonical one.
+**19 of the 25 examples are canonical**, so byte identity is tested on those
+nineteen and nowhere else. The other six are deliberately non-canonical — a
+setext heading, an indented code block, a tilde fence, a hard break spelled with
+trailing spaces, a skipped heading level, and a heading with no blank line after
+it — and exist to show that a conforming document need not be a canonical one.
 
 ## Usage
 
@@ -65,24 +65,33 @@ parser — and the rules of Chapter 2 run over its output. That is the only
 runtime dependency, and it is a deliberate one: an implementation that parsed
 Markdown itself would be testing its own parser rather than the specification.
 
-**Three places the specification does not yet decide**, and what this
+**Two places the specification does not yet decide**, and what this
 implementation does in the meantime:
 
 | | What it does | Upstream |
 |---|---|---|
-| An indented code block's `source` carries no fence, and P-5 requires fenced output | Fences it at projection — the only reading that satisfies P-5 | [spec#19](https://github.com/mindmapmarkdown/spec/issues/19) |
 | A heading inside a list item would lift to a section under an item, which S-1 forbids | Throws, naming §2.4 — the document is not conforming, and lift is defined over conforming documents | — |
-| L-9 normalises a hard break spelled with trailing spaces; a code block's trailing spaces are not a break | Normalises only where inline content lives — paragraphs, headings, block quotes | — |
+| A `code_block` entry in a tree built by hand, whose `source` is not in L-11's form | Fences it at projection — the only reading that satisfies P-5. Lift cannot produce such an entry | [RFC 0038](https://github.com/mindmapmarkdown/spec/blob/main/rfcs/0038-content-block-source.md), *Unresolved questions* |
 
 Each is a position taken to make the code run, not a reading the specification
 endorses. Where one turns out to be wrong, the fix is upstream first.
+
+**Two rows left this table on 2026-10-01, and one arrived.** What a code block's
+`source` contains, and whether a code block's trailing whitespace may survive
+canonical projection, were open questions; RFC 0038 decided both, `L-11` and the
+amended `P-8` are in the specification, and this implementation follows them
+rather than taking a position of its own. The row that arrived is the question
+the RFC left open in their place.
 
 **One place the specification decides and the decision is known to be wrong.**
 `L-10` recognises front matter by position, so a document that opens with a
 thematic break and carries a later one is swallowed whole and a heading inside it
 stops being a node. This implementation reproduces that faithfully rather than
 guarding against it, because a guard is a Normative change and belongs upstream:
-[spec#35](https://github.com/mindmapmarkdown/spec/issues/35).
+[spec#35](https://github.com/mindmapmarkdown/spec/issues/35). RFC 0037 proposed
+keeping `L-10` as it stands and was **rejected on 2026-09-28**, after a reader
+reported writing every note that way; RFC 0048, which makes front matter not open
+on a blank line, is in its comment period until 2026-10-11.
 
 ## Layout
 
