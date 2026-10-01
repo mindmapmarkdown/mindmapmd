@@ -17,8 +17,8 @@ const parser = new Parser()
  * trailing spaces is silently destroyed by an editor that trims them.
  *
  * Applied only where inline content lives. A code block's trailing spaces are
- * not a line break and must survive — which P-8, as written, forbids in
- * canonical output. RFC 0038 part 3 proposes exempting code block content.
+ * not a line break and must survive, and P-8 now exempts a content line of a
+ * code block for exactly that reason (RFC 0038 Part 3).
  */
 const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
 const hardBreaks = (text) => text.replace(/[ ]{2,}\n/g, '\\\n')
@@ -87,10 +87,10 @@ function stripColumns(line, k) {
  * first did. The first line is cut at the column where the block begins; every
  * later line loses up to that many columns of leading whitespace.
  *
- * PROTOTYPE for RFC 0038 part 1. Before it, later lines kept the indentation of
- * the list item that contains the block, projection added the item's
- * indentation again, and any multi-line block inside a list item failed the
- * tree round-trip.
+ * E-5, as amended by RFC 0038 Part 1. Before that amendment, later lines kept
+ * the indentation of the list item containing the block, projection added the
+ * item's indentation again, and any multi-line block inside a list item failed
+ * the tree round-trip.
  */
 function linesOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
@@ -103,8 +103,8 @@ function linesOf(n, lines) {
 }
 
 /**
- * PROTOTYPE for RFC 0038 part 2 — a code block, fenced or indented, is recorded
- * in the one form P-5 permits.
+ * L-11, added by RFC 0038 Part 2 — a code block, fenced or indented, is
+ * recorded in the one form P-5 permits.
  *
  * The content is CommonMark's own: the lines between the fences, or the lines of
  * an indented block, with the indentation CommonMark removes already removed —

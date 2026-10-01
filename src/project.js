@@ -8,9 +8,10 @@ import { assertWellFormed } from './tree.js'
 /** P-5, P-9 — a code block comes back fenced with backticks, whatever it was. */
 function fenced(source) {
   if (/^(```|~~~)/.test(source)) return source // already fenced; P-9 keeps it
-  // An indented code block's recorded source carries no fence. What it should
-  // carry is an open question (mindmapmarkdown/spec#19); until that is decided,
-  // the only reading that satisfies P-5 is to fence it here.
+  // Lift cannot reach this: L-11 records every code block fenced. A tree built
+  // by hand can, and whether a well-formedness rule should reject such an entry
+  // or projection should normalise it is left open by RFC 0038. Fencing here is
+  // the only reading that satisfies P-5 in the meantime.
   const ticks = '`'.repeat(Math.max(3, longestRun(source) + 1))
   return `${ticks}\n${source}\n${ticks}`
 }
