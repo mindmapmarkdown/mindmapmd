@@ -133,7 +133,13 @@ export function project(tree) {
         // and a sublist is not one. Content, when present, is a block and takes
         // its blank lines.
         if (!own.length) return `${head}\n${indent(nested.join('\n'), '  ')}`
-        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), '  ')}`
+        // PROTOTYPE P-7 (spec#61) — when the label is empty, the first content
+        // entry follows the bare marker directly. A blank line there plus the
+        // blank line before whatever comes next leaves two in a row once the
+        // definition is read out again, and two blank lines end the item: its
+        // children come back as siblings.
+        const gap = item.label ? '\n\n' : '\n'
+        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), '  ')}`
       })
       .join(sep)
   }
