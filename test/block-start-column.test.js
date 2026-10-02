@@ -81,3 +81,26 @@ test('a block quote inside an item keeps its own structure', () => {
   const tree = roundTrips('- item\n\n  > q\n  > r\n')
   assert.deepEqual(contentOf(tree.children[0]), [['block_quote', '> q\n> r']])
 })
+
+test('a column carried over from an indented definition does not cut the line', () => {
+  // commonmark.js reports this paragraph at column 3 — the *definition's*
+  // indentation — on a line whose own content begins at column 1. Slicing there
+  // silently dropped `ab`. What precedes a block on its first line is its
+  // container's indentation, so a column with text before it cannot be where
+  // the block begins.
+  const tree = roundTrips('  [x]: /x\nabcd\n')
+  assert.deepEqual(contentOf(tree), [['paragraph', 'abcd']])
+})
+
+test('the same over two lines, where the reported range runs backwards', () => {
+  const tree = roundTrips('  [x]: /x\nab\ncd\n')
+  assert.deepEqual(contentOf(tree), [['paragraph', 'ab\ncd']])
+})
+
+test('a block legitimately indented keeps the reported column', () => {
+  // Three columns of indentation is still a paragraph, and the columns before
+  // it are whitespace, so nothing is repaired here.
+  assert.deepEqual(contentOf(roundTrips('# A\n\n   para\n').children[0]), [
+    ['paragraph', 'para'],
+  ])
+})
