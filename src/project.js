@@ -39,8 +39,19 @@ function runs(children) {
  * the bare marker — `-` is an empty list item and `##` an empty ATX heading in
  * CommonMark, whereas the space before an empty label would end the line in
  * whitespace, which P-8 forbids.
+ *
+ * PROTOTYPE (spec#55) — a label of more than one line has its later lines
+ * written at the node's content column, the marker's width plus one. At column
+ * zero CommonMark would read such a line as a lazy continuation of whatever
+ * list encloses this one, which is a different tree.
  */
-const marked = (marker, label) => (label ? `${marker} ${label}` : marker)
+const marked = (marker, label) => {
+  if (!label) return marker
+  const [head, ...rest] = label.split('\n')
+  const line = `${marker} ${head}`
+  if (!rest.length) return line
+  return [line, ...rest.map((l) => (l.length ? ' '.repeat(marker.length + 1) + l : l))].join('\n')
+}
 
 const indent = (text, pad) =>
   text

@@ -24,6 +24,20 @@ const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
 const hardBreaks = (text) => text.replace(/[ ]{2,}\n/g, '\\\n')
 
 /**
+ * PROTOTYPE (spec#59) — no line of a recorded string ends in whitespace.
+ *
+ * `P-8` forbids a line ending in whitespace outside a code block, and `P-9`
+ * writes a recorded source back as it stands, so a `source` with a line ending
+ * in whitespace has **no** canonical projection at all: the P-rules are
+ * unsatisfiable for that tree. This is the collision `L-9` and `L-10` each
+ * resolved for one construct, resolved for the rest.
+ *
+ * Applied after `hardBreaks`, so the two or more spaces that spell a hard break
+ * have already become a backslash and are not removed here.
+ */
+const trimLines = (text) => text.replace(/[ \t]+$/gm, '')
+
+/**
  * L-10 — front matter. A document opening with a line of exactly three hyphens
  * and carrying a later such line holds that run of lines as one opaque block.
  *
@@ -89,6 +103,17 @@ function stripColumns(line, k) {
 }
 
 /**
+ * The columns `line` occupies before character `i`, a tab advancing to the next
+ * multiple of four as CommonMark counts it. E-5 measures columns, and a line
+ * indented with one tab has given up four of them, not one.
+ */
+function columnsBefore(line, i) {
+  let col = 0
+  for (let j = 0; j < i; j++) col += line[j] === '\t' ? 4 - (col % 4) : 1
+  return col
+}
+
+/**
  * The lines a block occupies, as written, with no line losing more than the
  * first did. The first line is cut at the column where the block begins; every
  * later line loses up to that many columns of leading whitespace.
@@ -97,13 +122,24 @@ function stripColumns(line, k) {
  * the indentation of the list item containing the block, projection added the
  * item's indentation again, and any multi-line block inside a list item failed
  * the tree round-trip.
+ *
+ * Where the block begins is measured rather than taken from the parser. **A
+ * block never begins with whitespace** — the columns before its first character
+ * belong to whatever contains it, which is what E-5 says — and commonmark.js
+ * reports a column that falls short in one case: a paragraph whose first line
+ * follows a link reference definition is reported at the column of the paragraph
+ * the definition was taken out of, so `[x]: /x` then `␣␣para` reported the
+ * paragraph at column 1 and its source kept two spaces that are not its own.
  */
 function linesOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
-  if (sl === el) return lines[sl - 1].slice(sc - 1, ec)
-  const k = sc - 1
-  const out = [lines[sl - 1].slice(k)]
-  for (let i = sl; i < el - 1; i++) out.push(stripColumns(lines[i], k))
+  const first = lines[sl - 1]
+  let i = sc - 1
+  while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
+  if (sl === el) return first.slice(i, Math.max(i, ec))
+  const k = columnsBefore(first, i)
+  const out = [first.slice(i)]
+  for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
   out.push(stripColumns(lines[el - 1].slice(0, ec), k))
   return out.join('\n')
 }
@@ -136,24 +172,36 @@ function codeSourceOf(n, lines) {
 
 /** Source of a block recorded as node content. E-5. */
 function sourceOf(n, lines) {
-  if (n.type === 'code_block') return codeSourceOf(n, lines)
+  if (n.type === 'code_block') return codeSourceOf(n, lines) // L-11; P-8 exempts its content
   const text = linesOf(n, lines)
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
-/** Source of a heading or item label, unchanged by the prototype. */
+/**
+ * Source of a heading or item label.
+ *
+ * PROTOTYPE (spec#55) — a label's later lines lose up to as many columns as the
+ * first line gave up, which is what `E-5` already does for a content block.
+ * Before this, a label below the top level kept its item's content column on
+ * every line after the first, projection indented the item again, and the tree
+ * did not survive its own projection.
+ */
 function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
+  const first = lines[sl - 1]
+  let i = sc - 1
+  while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
   let text
   if (sl === el) {
-    text = lines[sl - 1].slice(sc - 1, ec)
+    text = first.slice(i, Math.max(i, ec))
   } else {
-    const out = [lines[sl - 1].slice(sc - 1)]
-    for (let i = sl; i < el - 1; i++) out.push(lines[i])
-    out.push(lines[el - 1].slice(0, ec))
+    const k = columnsBefore(first, i)
+    const out = [first.slice(i)]
+    for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
+    out.push(stripColumns(lines[el - 1].slice(0, ec), k))
     text = out.join('\n')
   }
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
 /**
