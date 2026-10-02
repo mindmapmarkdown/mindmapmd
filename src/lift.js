@@ -7,7 +7,7 @@
 // Licensed under Apache-2.0. See LICENSE.
 
 import { Parser } from 'commonmark'
-import { block, node, root } from './tree.js'
+import { SECTION_LABEL_BREAK, block, node, root } from './tree.js'
 
 const parser = new Parser()
 
@@ -21,7 +21,36 @@ const parser = new Parser()
  * code block for exactly that reason (RFC 0038 Part 3).
  */
 const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
+
+/**
+ * PROTOTYPE (spec#64) — a soft line break inside a label is one space.
+ *
+ * Run after `hardBreaks`, so every line break left is either a hard break,
+ * which `L-9` has already written as a backslash, or a soft one. A soft break
+ * is **invisible**: every renderer collapses it to a space, which is the test
+ * `L-9` applied when it kept the backslash form and dropped the two-space one.
+ *
+ * A backslash at the end of a line is a hard break only when the run of
+ * backslashes before the break is odd; an even run is an escaped backslash
+ * followed by a soft break.
+ */
+const softBreaks = (text) =>
+  text.replace(/(\\*)\n/g, (m, slashes) => (slashes.length % 2 ? m : `${slashes} `))
 const hardBreaks = (text) => text.replace(/[ ]{2,}\n/g, '\\\n')
+
+/**
+ * PROTOTYPE (spec#59) — no line of a recorded string ends in whitespace.
+ *
+ * `P-8` forbids a line ending in whitespace outside a code block, and `P-9`
+ * writes a recorded source back as it stands, so a `source` with a line ending
+ * in whitespace has **no** canonical projection at all: the P-rules are
+ * unsatisfiable for that tree. This is the collision `L-9` and `L-10` each
+ * resolved for one construct, resolved for the rest.
+ *
+ * Applied after `hardBreaks`, so the two or more spaces that spell a hard break
+ * have already become a backslash and are not removed here.
+ */
+const trimLines = (text) => text.replace(/[ \t]+$/gm, '')
 
 /**
  * L-10 — front matter. A document opening with a line of exactly three hyphens
@@ -158,24 +187,36 @@ function codeSourceOf(n, lines) {
 
 /** Source of a block recorded as node content. E-5. */
 function sourceOf(n, lines) {
-  if (n.type === 'code_block') return codeSourceOf(n, lines)
+  if (n.type === 'code_block') return codeSourceOf(n, lines) // L-11; P-8 exempts its content
   const text = linesOf(n, lines)
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
-/** Source of a heading or item label, unchanged by the prototype. */
+/**
+ * Source of a heading or item label.
+ *
+ * PROTOTYPE (spec#55) — a label's later lines lose up to as many columns as the
+ * first line gave up, which is what `E-5` already does for a content block.
+ * Before this, a label below the top level kept its item's content column on
+ * every line after the first, projection indented the item again, and the tree
+ * did not survive its own projection.
+ */
 function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
+  const first = lines[sl - 1]
+  let i = sc - 1
+  while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
   let text
   if (sl === el) {
-    text = lines[sl - 1].slice(sc - 1, ec)
+    text = first.slice(i, Math.max(i, ec))
   } else {
-    const out = [lines[sl - 1].slice(sc - 1)]
-    for (let i = sl; i < el - 1; i++) out.push(lines[i])
-    out.push(lines[el - 1].slice(0, ec))
+    const k = columnsBefore(first, i)
+    const out = [first.slice(i)]
+    for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
+    out.push(stripColumns(lines[el - 1].slice(0, ec), k))
     text = out.join('\n')
   }
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
 /**
@@ -193,13 +234,20 @@ function rawSourceOf(n, lines) {
 const ATX_OPENER = /^[ ]{0,3}#{1,6}(?=[ \t]|$)/
 
 function labelOf(n, lines) {
+  // PROTOTYPE (spec#64) — the fold runs last, on what is left after the marker
+  // and any setext underline are removed. Run earlier it would eat the line
+  // break before the underline, and the underline would join the label.
   const text = rawSourceOf(n, lines)
-  if (n.type !== 'heading') return text.trim()
-  if (!ATX_OPENER.test(text)) return text.replace(/\n[ ]{0,3}(=+|-+)[ \t]*$/, '').trim()
-  return text
-    .replace(ATX_OPENER, '')
-    .replace(/(^|[ \t])#+[ \t]*$/, '')
-    .trim()
+  if (n.type !== 'heading') return softBreaks(text.trim())
+  if (!ATX_OPENER.test(text)) {
+    return softBreaks(text.replace(/\n[ ]{0,3}(=+|-+)[ \t]*$/, '').trim())
+  }
+  return softBreaks(
+    text
+      .replace(ATX_OPENER, '')
+      .replace(/(^|[ \t])#+[ \t]*$/, '')
+      .trim(),
+  )
 }
 
 /**
@@ -372,7 +420,20 @@ export function lift(markdown) {
     if (b.type === 'heading') {
       // L-5 — a heading at or below the open section's level closes it
       while (open.length && open[open.length - 1].level >= b.level) open.pop()
-      const section = node('section', labelOf(b, lines)) // L-2
+      const label = labelOf(b, lines) // L-2
+      if (SECTION_LABEL_BREAK.test(label)) {
+        // PROTOTYPE S-8 (spec#64). A hard break is all that can be left here
+        // after the soft-break fold, and P-6 has no way to write it: an ATX
+        // heading is one line. §2.4 explains the same shape for a heading
+        // inside a list item — lift is defined over conforming documents.
+        throw new Error(
+          'not a conforming document (spec.md §2.4): a heading whose label ' +
+            'carries a hard line break would lift to a section S-8 forbids, ' +
+            'and P-6 cannot write it — ' +
+            JSON.stringify(label),
+        )
+      }
+      const section = node('section', label)
       current().children.push(section)
       open.push({ level: b.level, node: section })
       last = section
