@@ -1,7 +1,11 @@
-// RFC 0039 prototype — ordered lists keep their numbers.
+// RFC 0039 — ordered lists keep their numbers.
 //
-// NOT CONFORMANCE. These cases test a proposal still in its comment period
-// (mindmapmarkdown/spec, RFC 0039). If it is rejected, this file goes with it.
+// NOT CONFORMANCE. RFC 0039 was accepted on 2026-09-29, but its rules are not in
+// `spec.md` yet: they land there together with RFC 0051, because until link
+// reference definitions survive projection a conforming document lifts to a tree
+// `S-5` rejects. These cases are what holds the implementation to the decision
+// in the meantime; the conformance suite cannot, because it is generated from a
+// `spec.md` that does not state these rules.
 //
 // Every case checks what CommonMark itself renders, not only the tree: the
 // projected document must show a reader the same number on every item as the
@@ -142,11 +146,11 @@ for (const [name, md] of Object.entries(cases)) {
   })
 }
 
-// Multi-line content inside an ordered item keeps the item's indentation on its
-// later lines, and projection adds it again — the defect RFC 0038 Part 1 fixes.
-// This prototype is branched from main, without RFC 0038, so the case is
-// recorded rather than hidden.
-test('RFC 0039 · ordered item holding a multi-line code block', { todo: 'depends on RFC 0038 Part 1 (container indentation)' }, () => {
+// Multi-line content inside an ordered item used to keep the item's indentation
+// on its later lines, and projection added it again. RFC 0038 Part 1 fixed that
+// in `E-5` and it is implemented on main, so this case — recorded here as a todo
+// while 0038 was still a proposal — now holds.
+test('RFC 0039 · ordered item holding a multi-line code block', () => {
   const md = '1. run\n\n   ```sh\n   make\n   ```\n2. done\n'
   const t = lift(md)
   assert.equal(stringify(lift(project(t))), stringify(t))

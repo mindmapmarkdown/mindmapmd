@@ -48,11 +48,12 @@ const indent = (text, pad) =>
     .join('\n')
 
 /**
- * PROTOTYPE P-3 (RFC 0039) — a bullet item's marker is `-`; an ordered item's is
- * its ordinal followed by its delimiter. CommonMark reads only the first item's
- * number, and a marker may carry at most nine digits, so a later item whose
- * ordinal has outgrown that writes the largest number that fits: its ordinal is
- * implied by the first item's, and the written digits are not read.
+ * P-3 (RFC 0039, accepted 2026-09-29) — a bullet item's marker is `-`; an
+ * ordered item's is its ordinal followed by its delimiter. CommonMark reads only
+ * the first item's number, and a marker may carry at most nine digits, so a
+ * later item whose ordinal has outgrown that writes the largest number that
+ * fits: its ordinal is implied by the first item's, and the written digits are
+ * not read.
  */
 const markerOf = (item) =>
   item.ordinal === undefined ? '-' : `${Math.min(item.ordinal, MAX_ORDINAL)}${item.delimiter}`
@@ -94,7 +95,7 @@ export function project(tree) {
 
   /**
    * Nodes whose content is written after their list rather than inside it —
-   * PROTOTYPE P-12 (RFC 0039). Filled while a run is written.
+   * P-12 (RFC 0039). Filled while a run is written.
    */
   const detached = new Set()
 
