@@ -83,6 +83,17 @@ function stripColumns(line, k) {
 }
 
 /**
+ * The columns `line` occupies before character `i`, a tab advancing to the next
+ * multiple of four as CommonMark counts it. E-5 measures columns, and a line
+ * indented with one tab has given up four of them, not one.
+ */
+function columnsBefore(line, i) {
+  let col = 0
+  for (let j = 0; j < i; j++) col += line[j] === '\t' ? 4 - (col % 4) : 1
+  return col
+}
+
+/**
  * The lines a block occupies, as written, with no line losing more than the
  * first did. The first line is cut at the column where the block begins; every
  * later line loses up to that many columns of leading whitespace.
@@ -91,13 +102,35 @@ function stripColumns(line, k) {
  * the indentation of the list item containing the block, projection added the
  * item's indentation again, and any multi-line block inside a list item failed
  * the tree round-trip.
+ *
+ * Where the block begins is measured rather than taken from the parser. **A
+ * block never begins with whitespace** — the columns before its first character
+ * belong to whatever contains it, which is what E-5 says — and commonmark.js
+ * reports the wrong column in two ways, both when a link reference definition is
+ * taken out of the paragraph a block was written in.
+ *
+ * **Too small.** `[x]: /x` then `␣␣para` reports the paragraph at column 1,
+ * because that is where the paragraph the definition came out of began. Its
+ * source kept two spaces that are not its own, so the column is advanced past
+ * any whitespace.
+ *
+ * **Too large.** `␣␣[x]: /x` then `abcd` reports the paragraph at column 3,
+ * carried over from the *definition's* indentation, on a line whose own content
+ * begins at column 1. Slicing there lost `ab`. A column whose preceding
+ * characters are not all whitespace cannot be where this block begins, because
+ * what precedes a block on its first line is its container's indentation; when
+ * that is what the parser reports, the block begins at the line's first
+ * non-whitespace character instead.
  */
 function linesOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
-  if (sl === el) return lines[sl - 1].slice(sc - 1, ec)
-  const k = sc - 1
-  const out = [lines[sl - 1].slice(k)]
-  for (let i = sl; i < el - 1; i++) out.push(stripColumns(lines[i], k))
+  const first = lines[sl - 1]
+  let i = /^[ \t]*$/.test(first.slice(0, sc - 1)) ? sc - 1 : 0
+  while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
+  if (sl === el) return first.slice(i, Math.max(i, ec))
+  const k = columnsBefore(first, i)
+  const out = [first.slice(i)]
+  for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
   out.push(stripColumns(lines[el - 1].slice(0, ec), k))
   return out.join('\n')
 }
