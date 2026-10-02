@@ -155,7 +155,17 @@ export function project(tree) {
         // immediately: P-7 asks for a blank line between *blocks of content*,
         // and a sublist is not one. Content, when present, is a block and takes
         // its blank lines.
-        if (!own.length) return `${head}\n${indent(nested.join('\n'), pad)}`
+        if (!own.length) {
+          // RFC 0046 — except when the first nested item has an empty label
+          // under a label of this item's own. Written directly below the label,
+          // a bare `-` is a setext heading underline, and CommonMark does not
+          // let an empty item of any other marker interrupt a paragraph; a blank
+          // line is the only spelling that lifts back to this tree. The marker
+          // the empty item carries makes no difference, which is why this does
+          // not look at it.
+          const gap = item.label && item.children[0].label === '' ? '\n\n' : '\n'
+          return `${head}${gap}${indent(nested.join('\n'), pad)}`
+        }
         return `${head}\n\n${indent([...own, ...nested].join('\n\n'), pad)}`
       })
       .join(sep)
