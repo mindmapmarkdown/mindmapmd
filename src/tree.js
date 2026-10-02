@@ -50,7 +50,7 @@ export function equal(a, b) {
 //
 // SHOULD, not MUST, and not significant to E-7. Applied on the way out so that
 // a serialised tree reads the way the specification writes one.
-// PROTOTYPE (RFC 0039): an ordered item's `ordinal` and `delimiter` follow its
+// RFC 0039: an ordered item's `ordinal` and `delimiter` follow its
 // label.
 
 export function ordered(tree) {
@@ -69,7 +69,7 @@ export function ordered(tree) {
 
 export const stringify = (tree) => JSON.stringify(ordered(tree))
 
-// ── Lists (PROTOTYPE, RFC 0039) ─────────────────────────────────────
+// ── Lists (RFC 0039) ────────────────────────────────────────────────
 
 /** The largest number a CommonMark list marker can carry: nine digits. */
 export const MAX_ORDINAL = 999_999_999
@@ -137,11 +137,11 @@ export function problems(tree) {
   }
   matter(tree, '', true)
 
-  // PROTOTYPE S-6 (RFC 0039) — `ordinal` and `delimiter` appear together, only
+  // S-6 (RFC 0039) — `ordinal` and `delimiter` appear together, only
   // on items; the ordinal is a non-negative integer, the delimiter `.` or `)`;
   // and the first item of each CommonMark list carries a number a marker can
   // hold.
-  // PROTOTYPE S-5 — a list that restarts its numbering with the same delimiter
+  // S-5 — a list that restarts its numbering with the same delimiter
   // as the list before it must be separable from that list: the nearest node
   // preceding it must have content (P-12).
   const lists = (n, path) => {

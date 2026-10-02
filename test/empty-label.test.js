@@ -16,6 +16,14 @@ import { project } from '../src/project.js'
 import { equal, stringify } from '../src/tree.js'
 
 const item = (label, children = []) => ({ kind: 'item', label, content: [], children })
+const ordered = (label, ordinal, children = []) => ({
+  kind: 'item',
+  label,
+  ordinal,
+  delimiter: '.',
+  content: [],
+  children,
+})
 const section = (label, children = []) => ({ kind: 'section', label, content: [], children })
 const root = (children) => ({ content: [], children })
 
@@ -40,13 +48,24 @@ test('P-8 · an empty heading is the bare marker', () => {
 
 test('P-8 · nested empty items', () => {
   // The shape `- 2026. 1. 15. 오전 10:00` lifts to: CommonMark reads each
-  // `N. ` as an ordered list opening inside the one before it.
+  // `N. ` as an ordered list opening inside the one before it. Under L-12 each
+  // of those items records the number CommonMark gave it, so the bare markers
+  // are `2026.`, `1.` and `15.` rather than three dashes, and P-4 indents each
+  // nesting level by its own marker's width plus one.
   const tree = lift('# 기록\n\n- 2026. 1. 15. 오전 10:00\n- 회의 시작\n')
   assert.ok(
-    equal(tree, root([section('기록', [item('', [item('', [item('', [item('오전 10:00')])])]), item('회의 시작')])])),
+    equal(
+      tree,
+      root([
+        section('기록', [
+          item('', [ordered('', 2026, [ordered('', 1, [ordered('오전 10:00', 15)])])]),
+          item('회의 시작'),
+        ]),
+      ]),
+    ),
     `lifted to ${stringify(tree)}`,
   )
-  holds(tree, '# 기록\n\n-\n  -\n    -\n      - 오전 10:00\n- 회의 시작\n')
+  holds(tree, '# 기록\n\n-\n  2026.\n        1.\n           15. 오전 10:00\n- 회의 시작\n')
 })
 
 test('P-8 · an empty item beside labelled siblings, at every depth', () => {
