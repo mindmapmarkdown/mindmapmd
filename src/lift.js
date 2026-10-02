@@ -222,10 +222,24 @@ function definitionRuns(doc, lines) {
   return runs
 }
 
+/**
+ * The columns of leading whitespace on a line, counting a tab to the next
+ * multiple of four as CommonMark does. E-5 measures a block's starting column,
+ * not its leading characters: one tab is four columns, not one.
+ */
+function leadColumns(line) {
+  let col = 0
+  for (const ch of line) {
+    if (ch === ' ') col++
+    else if (ch === '\t') col += 4 - (col % 4)
+    else break
+  }
+  return col
+}
+
 /** A definition's source, with its container's indentation removed (E-5). */
 function runSource(run, lines) {
-  const first = lines[run.start - 1]
-  const k = first.length - first.replace(/^[ \t]+/, '').length
+  const k = leadColumns(lines[run.start - 1])
   const out = []
   for (let i = run.start; i <= run.end; i++) out.push(stripColumns(lines[i - 1], k))
   return out.join('\n')
