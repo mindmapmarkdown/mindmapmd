@@ -57,6 +57,15 @@ test('a definition inside an item loses the item’s indentation (E-5)', () => {
   assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: https://example.com']])
 })
 
+test('a definition indented with a tab loses four columns, not one character', () => {
+  // E-5 measures the column a block begins at. A tab inside a list item puts
+  // the definition at column four; removing one character instead would leave
+  // three spaces behind, projection would add the item's indentation to them,
+  // and the tree would not survive the round trip.
+  const tree = roundTrips('- a\n\n\t[x]: https://example.com\n\n- b\n')
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: https://example.com']])
+})
+
 test('a definition written over several lines keeps its own line structure', () => {
   const tree = roundTrips('# Guide\n\n[x]:\n  https://example.com\n  "The guide"\n')
   assert.deepEqual(entries(tree.children[0]), [
