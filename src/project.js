@@ -49,19 +49,6 @@ const contentBlocks = (content) => {
   return out
 }
 
-/**
- * Whether a node's first content entry is written on the line below its marker
- * rather than after a blank line — RFC 0058's second sentence.
- *
- * Only a label that is empty, and only a link reference definition. A blank line
- * there, plus the blank line before whatever follows, leaves two in a row once
- * the definition is read out again, and two blank lines end the item. Any other
- * first block **needs** that blank line: without it the block is the node's
- * first inline content, which is its label.
- */
-const startsWithDefinition = (n) =>
-  n.label === '' && n.content[0]?.block === 'link_reference_definition'
-
 /** Split children into runs, so that each maximal run of items is one run. */
 function runs(children) {
   const out = []
@@ -227,18 +214,13 @@ export function write(tree) {
           const gap = item.label && item.children[0].label === '' ? '\n\n' : '\n'
           return `${head}${gap}${indent(nested.join('\n'), pad)}`
         }
-        // RFC 0058, second sentence — when this node's own label is empty, its
-        // first content entry follows the bare marker directly. A blank line
-        // there, plus the blank line before whatever comes next, leaves two in a
-        // row once a definition is read out again, and two blank lines end the
-        // item: its children come back as siblings.
-        //
-        // The two rules sit either side of this `if`, and they do not collide:
-        // RFC 0046 is about the label of the first *child*, this is about the
-        // label of the node being written, and an item with no content of its
-        // own never reaches this line.
-        const gap = startsWithDefinition(item) ? '\n' : '\n\n'
-        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), pad)}`
+        // spec#61 — an empty-labelled item whose content is a definition still
+        // loses its children here. Writing that first entry below the marker
+        // fixes 27 documents and breaks 81, because a second content block then
+        // lands inside the item and becomes its label; see RFC 0058's unresolved
+        // questions. The rule is withdrawn, and this line is RFC 0046's and
+        // RFC 0039's only.
+        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), pad)}`
       })
       .join(sep)
   }
