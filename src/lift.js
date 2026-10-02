@@ -106,15 +106,26 @@ function columnsBefore(line, i) {
  * Where the block begins is measured rather than taken from the parser. **A
  * block never begins with whitespace** — the columns before its first character
  * belong to whatever contains it, which is what E-5 says — and commonmark.js
- * reports a column that falls short in one case: a paragraph whose first line
- * follows a link reference definition is reported at the column of the paragraph
- * the definition was taken out of, so `[x]: /x` then `␣␣para` reported the
- * paragraph at column 1 and its source kept two spaces that are not its own.
+ * reports the wrong column in two ways, both when a link reference definition is
+ * taken out of the paragraph a block was written in.
+ *
+ * **Too small.** `[x]: /x` then `␣␣para` reports the paragraph at column 1,
+ * because that is where the paragraph the definition came out of began. Its
+ * source kept two spaces that are not its own, so the column is advanced past
+ * any whitespace.
+ *
+ * **Too large.** `␣␣[x]: /x` then `abcd` reports the paragraph at column 3,
+ * carried over from the *definition's* indentation, on a line whose own content
+ * begins at column 1. Slicing there lost `ab`. A column whose preceding
+ * characters are not all whitespace cannot be where this block begins, because
+ * what precedes a block on its first line is its container's indentation; when
+ * that is what the parser reports, the block begins at the line's first
+ * non-whitespace character instead.
  */
 function linesOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const first = lines[sl - 1]
-  let i = sc - 1
+  let i = /^[ \t]*$/.test(first.slice(0, sc - 1)) ? sc - 1 : 0
   while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
   if (sl === el) return first.slice(i, Math.max(i, ec))
   const k = columnsBefore(first, i)
