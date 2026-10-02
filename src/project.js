@@ -133,7 +133,19 @@ export function project(tree) {
         // and a sublist is not one. Content, when present, is a block and takes
         // its blank lines.
         if (!own.length) return `${head}\n${indent(nested.join('\n'), '  ')}`
-        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), '  ')}`
+        // PROTOTYPE P-7 (spec#61) — when the label is empty **and** there are
+        // children, the first content entry follows the bare marker directly.
+        //
+        // The blank line P-7 would put there, plus the blank line before the
+        // nested list, leaves two in a row once the definition is read out
+        // again — and two blank lines end a list item, so the children come
+        // back as siblings.
+        //
+        // Both conditions are needed. With no children there is only one blank
+        // line to leave behind and the item survives, so the blank line stays;
+        // removing it there would be a change with no defect behind it.
+        const gap = !item.label && nested.length ? '\n' : '\n\n'
+        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), '  ')}`
       })
       .join(sep)
   }

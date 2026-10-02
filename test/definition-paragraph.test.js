@@ -34,11 +34,13 @@ function roundTrips(md) {
 }
 
 test('an empty ordered item left behind by a definition stays a paragraph', () => {
-  const md = '[x]: /x\n1. \n'
+  // RFC 0057 Part 2 removes the trailing space, so this document's canonical
+  // spelling has none — and the defect is the same without it.
+  const md = '[x]: /x\n1.\n'
   const tree = roundTrips(md)
   assert.deepEqual(entries(tree), [
     [DEF, '[x]: /x'],
-    ['paragraph', '1. '],
+    ['paragraph', '1.'],
   ])
   assert.equal(project(tree), md, 'and the document is canonical')
 })
@@ -83,21 +85,21 @@ test('the paragraph keeps its own line structure', () => {
 })
 
 test('inside a list item, P-4 indents both lines', () => {
-  const md = '- i\n\n  [x]: /x\n  1. \n'
+  const md = '- i\n\n  [x]: /x\n  1.\n'
   const tree = roundTrips(md)
   assert.deepEqual(entries(tree.children[0]), [
     [DEF, '[x]: /x'],
-    ['paragraph', '1. '],
+    ['paragraph', '1.'],
   ])
   assert.equal(project(tree), md)
 })
 
 test('under a heading', () => {
-  const md = '# Guide\n\n[x]: /x\n1. \n'
+  const md = '# Guide\n\n[x]: /x\n1.\n'
   const tree = roundTrips(md)
   assert.deepEqual(entries(tree.children[0]), [
     [DEF, '[x]: /x'],
-    ['paragraph', '1. '],
+    ['paragraph', '1.'],
   ])
   assert.equal(project(tree), md)
 })
@@ -136,4 +138,54 @@ test('a paragraph not preceded by a definition is unchanged', () => {
     [DEF, '[x]: /x'],
   ])
   assert.equal(project(tree), md)
+})
+
+// ── An empty label with content and children (spec#61) ─────────────
+
+test('an empty-labelled item with a definition and a child keeps the child', () => {
+  // P-7's blank line before the content, plus the blank line before the nested
+  // list, leaves two in a row once the definition is read out again — and two
+  // blank lines end a list item, so the child came back as a sibling.
+  const md = '-\n  [x]: /x\n\n  - b\n'
+  const tree = roundTrips(md)
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: /x']])
+  assert.equal(tree.children[0].label, '')
+  assert.equal(tree.children[0].children.length, 1, 'the child is still a child')
+  assert.equal(tree.children[0].children[0].label, 'b')
+  assert.equal(project(tree), md)
+})
+
+test('two definitions are one entry, and the child still survives', () => {
+  const tree = roundTrips('-\n  [x]: /x\n  [y]: /y\n\n  - b\n')
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: /x\n[y]: /y']])
+  assert.equal(tree.children[0].children.length, 1)
+})
+
+test('with no child, the blank line stays', () => {
+  // One blank line is all that is left behind, and an empty item survives it.
+  // Removing it here would be a change with no defect behind it.
+  const md = '-\n\n  [x]: /x\n'
+  const tree = roundTrips(md)
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: /x']])
+  assert.equal(project(tree), md)
+})
+
+test('a non-empty label with content and children is unaffected', () => {
+  const md = '- a\n\n  [x]: /x\n\n  - b\n'
+  const tree = roundTrips(md)
+  assert.equal(tree.children[0].label, 'a')
+  assert.equal(project(tree), md)
+})
+
+test('an empty label whose content is not a definition keeps its blank line', () => {
+  // Such an item has no children: any block that could sit between the marker
+  // and a nested list becomes the label instead, and a definition is the one
+  // block CommonMark does not report. These are the cases the second condition
+  // of the rule protects.
+  for (const md of ['-\n\n  para\n', '-\n\n  > q\n']) {
+    const tree = roundTrips(md)
+    assert.equal(tree.children[0].label, '')
+    assert.equal(tree.children[0].children.length, 0)
+    assert.equal(project(tree), md)
+  }
 })
