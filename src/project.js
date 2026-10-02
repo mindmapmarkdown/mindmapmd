@@ -214,7 +214,18 @@ export function write(tree) {
           const gap = item.label && item.children[0].label === '' ? '\n\n' : '\n'
           return `${head}${gap}${indent(nested.join('\n'), pad)}`
         }
-        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), pad)}`
+        // RFC 0058, second sentence — when this node's own label is empty, its
+        // first content entry follows the bare marker directly. A blank line
+        // there, plus the blank line before whatever comes next, leaves two in a
+        // row once a definition is read out again, and two blank lines end the
+        // item: its children come back as siblings.
+        //
+        // The two rules sit either side of this `if`, and they do not collide:
+        // RFC 0046 is about the label of the first *child*, this is about the
+        // label of the node being written, and an item with no content of its
+        // own never reaches this line.
+        const gap = item.label ? '\n\n' : '\n'
+        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), pad)}`
       })
       .join(sep)
   }
