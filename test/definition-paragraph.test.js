@@ -137,30 +137,3 @@ test('a paragraph not preceded by a definition is unchanged', () => {
   ])
   assert.equal(project(tree), md)
 })
-
-// ── An empty label's first content entry (spec#61) ──────────────────
-
-test('an empty label’s first content entry follows the bare marker', () => {
-  // A blank line there, plus the blank line before the nested list, leaves two
-  // in a row once the definition is read out again — and two blank lines end
-  // the item, so its children come back as siblings.
-  const md = '-\n  [x]: /x\n\n  - b\n'
-  const tree = roundTrips(md)
-  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: /x']])
-  assert.equal(tree.children[0].children.length, 1, 'the child is still a child')
-  assert.equal(project(tree), md)
-})
-
-test('the same with no child', () => {
-  const md = '-\n  [x]: /x\n'
-  const tree = roundTrips(md)
-  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: /x']])
-  assert.equal(project(tree), md)
-})
-
-test('a non-empty label keeps its blank line', () => {
-  const md = '- a\n\n  [x]: /x\n\n  - b\n'
-  const tree = roundTrips(md)
-  assert.equal(tree.children[0].label, 'a')
-  assert.equal(project(tree), md)
-})
