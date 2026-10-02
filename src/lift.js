@@ -45,6 +45,12 @@ const FRONT_MATTER_FENCE = /^---[ \t]*$/
 function frontMatter(markdown) {
   const all = markdown.split('\n')
   if (!FRONT_MATTER_FENCE.test(all[0] ?? '')) return null
+  // PROTOTYPE (RFC 0048) — the line after the opening fence must not be blank.
+  // Front matter written by Jekyll, Hugo or Obsidian opens on its first key. A
+  // note that opens with a thematic break and carries a later one has a blank
+  // line there, and its author means both fences as rules, not as a block —
+  // reported on the Obsidian forum, mindmapmarkdown/spec#35.
+  if (!/\S/.test(all[1] ?? '')) return null
   for (let i = 1; i < all.length; i++) {
     if (!FRONT_MATTER_FENCE.test(all[i])) continue
     return {
