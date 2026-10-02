@@ -88,23 +88,36 @@ test('an HTML block does not keep it — the stated cost', () => {
 })
 
 // ── Part 1 · a label does not carry its item's indentation ──────────
+//
+// After spec#64's fold a **soft** break in a label is a space, so Part 1's rule
+// is reached only by a label carrying a hard break. Both are checked here: the
+// soft cases say what the fold does, the hard ones say what Part 1 does.
 
-test('a multi-line label below the top level', () => {
+test('a multi-line label below the top level, soft break', () => {
   const tree = holds('- x\n  - a\n    b\n')
-  assert.equal(tree.children[0].children[0].label, 'a\nb')
+  assert.equal(tree.children[0].children[0].label, 'a b')
+})
+
+test('a multi-line label below the top level, hard break', () => {
+  const tree = holds('- x\n  - a' + BS + '\n    b\n')
+  assert.equal(tree.children[0].children[0].label, 'a' + BS + '\nb')
 })
 
 test('at depth one, and at depth three', () => {
-  assert.equal(holds('- a\n  b\n').children[0].label, 'a\nb')
+  assert.equal(holds('- a\n  b\n').children[0].label, 'a b')
+  assert.equal(holds('- a' + BS + '\n  b\n').children[0].label, 'a' + BS + '\nb')
   assert.equal(
-    holds('- x\n  - y\n    - a\n      b\n').children[0].children[0].children[0].label,
-    'a\nb',
+    holds('- x\n  - y\n    - a' + BS + '\n      b\n').children[0].children[0].children[0].label,
+    'a' + BS + '\nb',
   )
 })
 
 test('a line indented further than the first keeps the excess', () => {
-  // The first line gives up two columns; a tab is four, so two remain.
-  assert.equal(holds('- a\n' + TAB + 'b\n').children[0].label, 'a\n  b')
+  // The first line gives up two columns; a tab is four, so two remain — and
+  // then the soft break folds, so the excess ends up inside the label's text.
+  assert.equal(holds('- a\n' + TAB + 'b\n').children[0].label, 'a   b')
+  // With a hard break the line structure survives and the excess is visible.
+  assert.equal(holds('- a' + BS + '\n' + TAB + 'b\n').children[0].label, 'a' + BS + '\n  b')
 })
 
 test('a hard break inside a label, in both spellings', () => {
@@ -116,17 +129,25 @@ test('a hard break inside a label, in both spellings', () => {
 })
 
 test('three lines, a sibling after it, and content beside it', () => {
-  assert.equal(holds('- a\n  b\n  c\n').children[0].label, 'a\nb\nc')
-  const sib = holds('- x\n  - a\n    b\n  - c\n').children[0]
-  assert.deepEqual([sib.children[0].label, sib.children[1].label], ['a\nb', 'c'])
-  const withContent = holds('- a\n  b\n\n  para\n').children[0]
-  assert.equal(withContent.label, 'a\nb')
+  assert.equal(holds('- a\n  b\n  c\n').children[0].label, 'a b c')
+  assert.equal(
+    holds('- a' + BS + '\n  b' + BS + '\n  c\n').children[0].label,
+    'a' + BS + '\nb' + BS + '\nc',
+  )
+  const sib = holds('- x\n  - a' + BS + '\n    b\n  - c\n').children[0]
+  assert.deepEqual([sib.children[0].label, sib.children[1].label], ['a' + BS + '\nb', 'c'])
+  const withContent = holds('- a' + BS + '\n  b\n\n  para\n').children[0]
+  assert.equal(withContent.label, 'a' + BS + '\nb')
   assert.deepEqual(contentOf(withContent), [['paragraph', 'para']])
 })
 
 test('inline markup is not interpreted, across lines either', () => {
-  assert.equal(holds('- [a](/a)\n  [b](/b)\n').children[0].label, '[a](/a)\n[b](/b)')
-  assert.equal(holds('- a\n  *b*\n').children[0].label, 'a\n*b*')
+  assert.equal(holds('- [a](/a)\n  [b](/b)\n').children[0].label, '[a](/a) [b](/b)')
+  assert.equal(
+    holds('- [a](/a)' + BS + '\n  [b](/b)\n').children[0].label,
+    '[a](/a)' + BS + '\n[b](/b)',
+  )
+  assert.equal(holds('- a\n  *b*\n').children[0].label, 'a *b*')
 })
 
 test('a setext heading’s label is the first line, with no underline', () => {
@@ -135,10 +156,18 @@ test('a setext heading’s label is the first line, with no underline', () => {
 
 // ── Known gap · a section's label with a line break (spec#64) ───────
 
-test(
-  'a setext heading spanning two lines',
-  { todo: 'no canonical projection exists — spec#64, an ATX heading is one line' },
-  () => {
-    holds('Head\nmore\n===\n')
-  },
-)
+test('a setext heading spanning two lines folds to one', () => {
+  // spec#64 — a soft break in a heading renders as a space, so folding it
+  // changes nothing a reader sees and the heading becomes writable as ATX.
+  const tree = holds('Head\nmore\n===\n')
+  assert.equal(tree.children[0].label, 'Head more')
+  assert.equal(project(tree), '# Head more\n')
+})
+
+test('a setext heading with a hard break is refused', () => {
+  // S-8 — a hard break does render, so folding it would change the output, and
+  // P-6 has no way to write it: an ATX heading is one line. §2.4's pattern.
+  for (const md of ['Head' + BS + '\nmore\n===\n', 'Head' + SP + SP + '\nmore\n===\n']) {
+    assert.throws(() => lift(md), /S-8/)
+  }
+})
