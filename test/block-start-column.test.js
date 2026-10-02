@@ -37,7 +37,11 @@ function roundTrips(md) {
 
 test('a paragraph after a definition does not keep the definition’s column', () => {
   const tree = roundTrips('[x]: https://example.com\n  para\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'para']])
+  // RFC 0051 records the definition, so it is the entry before the paragraph.
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: https://example.com'],
+    ['paragraph', 'para'],
+  ])
 })
 
 test('four spaces after a definition is still a paragraph, and loses them', () => {
@@ -46,12 +50,18 @@ test('four spaces after a definition is still a paragraph, and loses them', () =
   // read out of one. Keeping the four spaces made projection write a code
   // block instead — the content changed, not only its spelling.
   const tree = roundTrips('[x]: https://example.com\n    indented\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'indented']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: https://example.com'],
+    ['paragraph', 'indented'],
+  ])
 })
 
 test('the same under a heading, where the node is not the root', () => {
   const tree = roundTrips('# Guide\n\n[x]: https://example.com\n  para\n')
-  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'para']])
+  assert.deepEqual(contentOf(tree.children[0]), [
+    ['link_reference_definition', '[x]: https://example.com'],
+    ['paragraph', 'para'],
+  ])
 })
 
 test('a multi-line block in a list item still loses exactly the first line’s columns', () => {
