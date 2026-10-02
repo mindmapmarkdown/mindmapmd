@@ -132,3 +132,13 @@ test('inline markup is not interpreted, across lines either', () => {
 test('a setext heading’s label is the first line, with no underline', () => {
   assert.equal(holds('Head\n====\nmore\n').children[0].label, 'Head')
 })
+
+// ── Known gap · a section's label with a line break (spec#64) ───────
+
+test(
+  'a setext heading spanning two lines',
+  { todo: 'no canonical projection exists — spec#64, an ATX heading is one line' },
+  () => {
+    holds('Head\nmore\n===\n')
+  },
+)

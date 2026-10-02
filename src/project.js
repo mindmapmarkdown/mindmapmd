@@ -45,16 +45,22 @@ function runs(children) {
  * CommonMark, whereas the space before an empty label would end the line in
  * whitespace, which P-8 forbids.
  *
- * PROTOTYPE (spec#55) — a label of more than one line has its later lines
- * written at the node's content column, the marker's width plus one. At column
- * zero CommonMark would read such a line as a lazy continuation of whatever
- * list encloses this one, which is a different tree.
+ * PROTOTYPE (spec#55) — an **item's** label of more than one line has its later
+ * lines written at the item's content column, the marker's width plus one. At
+ * column zero CommonMark would read such a line as a lazy continuation of
+ * whatever list encloses this one, which is a different tree.
+ *
+ * A heading is left as it was, which is **known to be wrong** (spec#64): an ATX
+ * heading is one line, so a section whose label carries a line break has no
+ * canonical projection at all. That is a different question from this one and
+ * is not answered here; test/recorded-whitespace.test.js records it as a todo.
  */
+const HEADING = /^#/
 const marked = (marker, label) => {
   if (!label) return marker
   const [head, ...rest] = label.split('\n')
   const line = `${marker} ${head}`
-  if (!rest.length) return line
+  if (!rest.length || HEADING.test(marker)) return [line, ...rest].join('\n')
   return [line, ...rest.map((l) => (l.length ? ' '.repeat(marker.length + 1) + l : l))].join('\n')
 }
 
