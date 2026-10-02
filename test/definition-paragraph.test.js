@@ -34,11 +34,13 @@ function roundTrips(md) {
 }
 
 test('an empty ordered item left behind by a definition stays a paragraph', () => {
-  const md = '[x]: /x\n1. \n'
+  // RFC 0057 Part 2 removes the trailing space, so this document's canonical
+  // spelling has none — and the defect is the same without it.
+  const md = '[x]: /x\n1.\n'
   const tree = roundTrips(md)
   assert.deepEqual(entries(tree), [
     [DEF, '[x]: /x'],
-    ['paragraph', '1. '],
+    ['paragraph', '1.'],
   ])
   assert.equal(project(tree), md, 'and the document is canonical')
 })
@@ -83,21 +85,21 @@ test('the paragraph keeps its own line structure', () => {
 })
 
 test('inside a list item, P-4 indents both lines', () => {
-  const md = '- i\n\n  [x]: /x\n  1. \n'
+  const md = '- i\n\n  [x]: /x\n  1.\n'
   const tree = roundTrips(md)
   assert.deepEqual(entries(tree.children[0]), [
     [DEF, '[x]: /x'],
-    ['paragraph', '1. '],
+    ['paragraph', '1.'],
   ])
   assert.equal(project(tree), md)
 })
 
 test('under a heading', () => {
-  const md = '# Guide\n\n[x]: /x\n1. \n'
+  const md = '# Guide\n\n[x]: /x\n1.\n'
   const tree = roundTrips(md)
   assert.deepEqual(entries(tree.children[0]), [
     [DEF, '[x]: /x'],
-    ['paragraph', '1. '],
+    ['paragraph', '1.'],
   ])
   assert.equal(project(tree), md)
 })
