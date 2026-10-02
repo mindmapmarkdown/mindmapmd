@@ -49,6 +49,19 @@ const contentBlocks = (content) => {
   return out
 }
 
+/**
+ * Whether a node's first content entry is written on the line below its marker
+ * rather than after a blank line — RFC 0058's second sentence.
+ *
+ * Only a label that is empty, and only a link reference definition. A blank line
+ * there, plus the blank line before whatever follows, leaves two in a row once
+ * the definition is read out again, and two blank lines end the item. Any other
+ * first block **needs** that blank line: without it the block is the node's
+ * first inline content, which is its label.
+ */
+const startsWithDefinition = (n) =>
+  n.label === '' && n.content[0]?.block === 'link_reference_definition'
+
 /** Split children into runs, so that each maximal run of items is one run. */
 function runs(children) {
   const out = []
@@ -224,7 +237,7 @@ export function write(tree) {
         // RFC 0046 is about the label of the first *child*, this is about the
         // label of the node being written, and an item with no content of its
         // own never reaches this line.
-        const gap = item.label ? '\n\n' : '\n'
+        const gap = startsWithDefinition(item) ? '\n' : '\n\n'
         return `${head}${gap}${indent([...own, ...nested].join('\n\n'), pad)}`
       })
       .join(sep)
