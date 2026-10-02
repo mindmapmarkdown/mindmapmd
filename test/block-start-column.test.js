@@ -89,12 +89,19 @@ test('a column carried over from an indented definition does not cut the line', 
   // container's indentation, so a column with text before it cannot be where
   // the block begins.
   const tree = roundTrips('  [x]: /x\nabcd\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'abcd']])
+  // RFC 0051 records the definition, so it is the entry before the paragraph.
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: /x'],
+    ['paragraph', 'abcd'],
+  ])
 })
 
 test('the same over two lines, where the reported range runs backwards', () => {
   const tree = roundTrips('  [x]: /x\nab\ncd\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'ab\ncd']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: /x'],
+    ['paragraph', 'ab\ncd'],
+  ])
 })
 
 test('a block legitimately indented keeps the reported column', () => {
