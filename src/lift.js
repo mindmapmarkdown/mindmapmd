@@ -436,9 +436,19 @@ export function lift(markdown) {
           )
         }
         if (!labelled) {
-          item.label = labelOf(b, lines)
           labelled = true
-          continue
+          // PROTOTYPE (spec#71) — a label is the node's first **inline** content,
+          // so only a paragraph can be one. An item whose first block is
+          // anything else has an empty label, and that block is content like
+          // any other.
+          //
+          // Before this, the block's source became the label: an item opening
+          // with a thematic break had the label `---`, and `- ---` is itself a
+          // thematic break, so the tree had no canonical projection at all.
+          if (b.type === 'paragraph') {
+            item.label = labelOf(b, lines)
+            continue
+          }
         }
         // L-3 — this item, or, after a list nested in this item, that list's
         // deepest last item

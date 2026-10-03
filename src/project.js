@@ -232,7 +232,13 @@ export function write(tree) {
         // no content of its own; this is about the label of the node being
         // written, and only runs when it has some.
         const gap = !item.label && nested.length ? '\n' : '\n\n'
-        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), pad)}`
+        // PROTOTYPE P-4 (spec#71) — when the item begins with a blank line,
+        // CommonMark measures indentation from column 0, so four columns make
+        // an indented code block whatever the marker was. An empty label with
+        // a wide marker reaches four: 11. pads to four. Cap it at three, which
+        // still keeps the content inside the item.
+        const contentPad = gap === String.fromCharCode(10).repeat(2) && pad.length > 3 ? "   " : pad
+        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), contentPad)}`
       })
       .join(sep)
   }

@@ -22,7 +22,8 @@ import { Parser } from 'commonmark'
 
 import { lift } from '../src/lift.js'
 import { project } from '../src/project.js'
-import { block, node, problems, root, stringify } from '../src/tree.js'
+import { block, node, root, stringify } from '../src/tree.js'
+import { problems } from '../src/wellformed.js'
 
 const parser = new Parser()
 
