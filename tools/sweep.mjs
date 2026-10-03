@@ -147,6 +147,7 @@ const FRAGMENTS = [
 
   // L-3 — thematic breaks, in all four spellings
   '---',
+<<<<<<< HEAD
   '***',
   '___',
   '- - -',
@@ -171,6 +172,17 @@ const FRAGMENTS = [
   TAB + 'tabbed',
   '-' + TAB + 'a',
   '1.' + TAB + 'b',
+
+  // Indented copies, from RFC 0072's prototype. Every construct that can be a
+  // list item's first block appears both at column 0 and indented two, because
+  // the difference between those is where #71 hid while this sweep reported
+  // zero. `  ---` is already above; these are the rest.
+  '  > q',
+  '  para',
+  '  ' + F + 'sh',
+  '  x',
+  '  ' + F,
+  '  |h|' + '\n' + '  |-|' + '\n' + '  |v|',
 ]
 
 /** The conformance suite, for the mutating generator. */
