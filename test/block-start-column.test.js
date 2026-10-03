@@ -94,3 +94,33 @@ test('a block legitimately indented keeps the reported column', () => {
     ['paragraph', 'para'],
   ])
 })
+
+test('an empty paragraph left behind by a definition is not a block', () => {
+  // commonmark.js reports a paragraph with no children for `[y]: /y` when the
+  // next line closes it without being a setext underline. A paragraph with no
+  // inline content does not exist in CommonMark's own terms, and an entry for
+  // it recorded a `source` that is the definition — which is not a paragraph.
+  const tree = roundTrips('[x]: /x\n---\n')
+  assert.deepEqual(contentOf(tree), [['thematic_break', '---']])
+})
+
+test('two definitions and a break, likewise', () => {
+  const tree = roundTrips('[a]: /a\n[b]: /b\n---\n')
+  assert.deepEqual(contentOf(tree), [['thematic_break', '---']])
+})
+
+test('under a heading and inside an item', () => {
+  assert.deepEqual(contentOf(roundTrips('# Guide\n\n[x]: /x\n---\n').children[0]), [
+    ['thematic_break', '---'],
+  ])
+  assert.deepEqual(contentOf(roundTrips('- i\n\n  [x]: /x\n  ---\n').children[0]), [
+    ['thematic_break', '---'],
+  ])
+})
+
+test('a paragraph that only looks empty is still a block', () => {
+  // `===` after a definition is not a setext underline for it, because the
+  // definition consumed nothing: the paragraph holds the text `===`.
+  const tree = roundTrips('[x]: /x\n===\n')
+  assert.deepEqual(contentOf(tree), [['paragraph', '[x]: /x\n===']])
+})
