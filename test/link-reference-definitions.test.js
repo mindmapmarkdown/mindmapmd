@@ -1,0 +1,150 @@
+// Link reference definitions as node content — mindmapmarkdown/spec#40,
+// proposed as RFC 0051.
+//
+// CommonMark takes a definition out of the document before it builds the tree,
+// so `L-3` has nothing to attach and projection drops it: a reference-style link
+// stops being a link after one round trip. Accepting RFC 0039 made that worse —
+// two ordered lists separated by a definition lift to a restart with nothing
+// between them, which `S-5` rejects — so the loss can no longer be deferred.
+//
+// Licensed under Apache-2.0. See LICENSE.
+
+import test from 'node:test'
+import assert from 'node:assert/strict'
+
+import { lift } from '../src/lift.js'
+import { project } from '../src/project.js'
+import { equal, stringify } from '../src/tree.js'
+
+const DEF = 'link_reference_definition'
+const entries = (node) => node.content.map((e) => [e.block, e.source])
+
+/** L1 both ways: the tree projects to a document that lifts back to it. */
+function roundTrips(md) {
+  const tree = lift(md)
+  const out = project(tree)
+  const back = lift(out)
+  assert.ok(equal(back, tree), `projected:\n${out}\nlifted back to ${stringify(back)}`)
+  assert.equal(project(back), out, 'second projection is not byte-stable')
+  return tree
+}
+
+test('a definition before any node is the root’s content', () => {
+  const tree = roundTrips('[x]: https://example.com\n\n# Guide\n\nSee [the guide][x].\n')
+  assert.deepEqual(entries(tree), [[DEF, '[x]: https://example.com']])
+  assert.equal(tree.children[0].label, 'Guide')
+})
+
+test('a definition after a paragraph is that node’s content, in order', () => {
+  const tree = roundTrips('# Guide\n\nText.\n\n[x]: https://example.com\n')
+  assert.deepEqual(entries(tree.children[0]), [
+    ['paragraph', 'Text.'],
+    [DEF, '[x]: https://example.com'],
+  ])
+})
+
+test('a definition between two lists belongs to the item before it', () => {
+  // The shape that matters for S-5 once RFC 0039 lands: the definition is the
+  // content that separates a restart from the list before it.
+  const tree = lift('- a\n\n[x]: https://example.com\n\n- b\n')
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: https://example.com']])
+  assert.deepEqual(entries(tree.children[1]), [])
+  roundTrips('- a\n\n[x]: https://example.com\n\n- b\n')
+})
+
+test('a definition inside an item loses the item’s indentation (E-5)', () => {
+  const tree = roundTrips('- a\n\n  [x]: https://example.com\n\n- b\n')
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: https://example.com']])
+})
+
+test('a definition indented with a tab loses four columns, not one character', () => {
+  // E-5 measures the column a block begins at. A tab inside a list item puts
+  // the definition at column four; removing one character instead would leave
+  // three spaces behind, projection would add the item's indentation to them,
+  // and the tree would not survive the round trip.
+  const tree = roundTrips('- a\n\n\t[x]: https://example.com\n\n- b\n')
+  assert.deepEqual(entries(tree.children[0]), [[DEF, '[x]: https://example.com']])
+})
+
+test('a definition written over several lines keeps its own line structure', () => {
+  const tree = roundTrips('# Guide\n\n[x]:\n  https://example.com\n  "The guide"\n')
+  assert.deepEqual(entries(tree.children[0]), [
+    [DEF, '[x]:\n  https://example.com\n  "The guide"'],
+  ])
+})
+
+test('adjacent definitions are one entry — telling them apart means parsing them', () => {
+  const tree = roundTrips('# Guide\n\n[a]: /a\n[b]: /b\n\nText.\n')
+  assert.deepEqual(entries(tree.children[0]), [
+    [DEF, '[a]: /a\n[b]: /b'],
+    ['paragraph', 'Text.'],
+  ])
+})
+
+test('a definition after a nested list attaches to the deepest last item (L-3)', () => {
+  const tree = roundTrips('- a\n  - b\n\n[x]: /x\n\n- c\n')
+  assert.deepEqual(entries(tree.children[0].children[0]), [[DEF, '[x]: /x']])
+})
+
+test('an empty item is still an empty item, not a definition', () => {
+  // The bare marker is a line no block covers; the container's marker line is
+  // what keeps it from being read as a definition.
+  const tree = roundTrips('- a\n-\n')
+  assert.equal(tree.children[1].label, '')
+  assert.deepEqual(entries(tree.children[1]), [])
+})
+
+test('a definition inside a block quote stays inside the quote', () => {
+  // The quote's own source holds it, so it is not a gap to be recovered.
+  const tree = roundTrips('# Guide\n\n> [x]: /x\n>\n> Quoted.\n')
+  assert.deepEqual(entries(tree.children[0]), [['block_quote', '> [x]: /x\n>\n> Quoted.']])
+})
+
+test('a definition after a block quote is the node’s content', () => {
+  const tree = roundTrips('# Guide\n\n> Quoted.\n\n[x]: /x\n')
+  assert.deepEqual(entries(tree.children[0]), [
+    ['block_quote', '> Quoted.'],
+    [DEF, '[x]: /x'],
+  ])
+})
+
+test('a definition inside a code block is code', () => {
+  const tree = roundTrips('# Guide\n\n```\n[x]: /x\n```\n')
+  assert.deepEqual(entries(tree.children[0]), [['code_block', '```\n[x]: /x\n```']])
+})
+
+test('a document with no definition is unchanged', () => {
+  const tree = lift('# Guide\n\nText.\n\n- a\n')
+  assert.deepEqual(entries(tree.children[0]), [['paragraph', 'Text.']])
+})
+
+test('a definition the parser hid inside an empty paragraph is recovered', () => {
+  // `[x]: /x` then `---` leaves commonmark.js reporting a paragraph with no
+  // children, whose sourcepos covers the definition's own line. Treating those
+  // lines as covered hid the definition from this walk, and the entry came back
+  // as a `paragraph` whose source was the definition — the second arrangement
+  // reported on mindmapmarkdown/spec#56, which turned out to be this bug.
+  const tree = roundTrips('[x]: /x\n---\n')
+  assert.deepEqual(entries(tree), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+})
+
+test('the same under a heading, and inside an item', () => {
+  assert.deepEqual(entries(roundTrips('# Guide\n\n[x]: /x\n---\n').children[0]), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+  assert.deepEqual(entries(roundTrips('- i\n\n  [x]: /x\n  ---\n').children[0]), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+})
+
+test('a blank line between them gives the same tree', () => {
+  assert.deepEqual(entries(roundTrips('[x]: /x\n\n---\n')), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+})
