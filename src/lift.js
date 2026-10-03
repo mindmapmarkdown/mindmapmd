@@ -161,6 +161,21 @@ function codeSourceOf(n, lines) {
   return [fence + info, ...body, fence].join('\n')
 }
 
+/**
+ * Whether a block the parser reports is a block at all.
+ *
+ * commonmark.js leaves an **empty paragraph** behind when a link reference
+ * definition consumes a whole paragraph and the next line closes it without
+ * being a setext underline: `[y]: /y` then `---` reports a paragraph with no
+ * children, covering the definition's own line, and then a thematic break.
+ *
+ * A paragraph with no inline content does not exist in CommonMark's own terms —
+ * a paragraph is inline content — and an entry for it would record a `source`
+ * that is the definition, which is not a paragraph. So it is not a block, it
+ * takes no label, and it produces no content entry.
+ */
+const isBlock = (n) => !(n.type === 'paragraph' && n.firstChild === null)
+
 /** Source of a block recorded as node content. E-5. */
 function sourceOf(n, lines) {
   if (n.type === 'code_block') return codeSourceOf(n, lines)
@@ -246,6 +261,7 @@ export function lift(markdown) {
       last = item
       let labelled = false
       for (let b = li.firstChild; b; b = b.next) {
+        if (!isBlock(b)) continue
         if (b.type === 'list') {
           items(b, item, true) // L-7 — depth is nesting within the list
           continue
@@ -276,6 +292,7 @@ export function lift(markdown) {
   }
 
   for (let b = doc.firstChild; b; b = b.next) {
+    if (!isBlock(b)) continue
     if (b.type === 'heading') {
       // L-5 — a heading at or below the open section's level closes it
       while (open.length && open[open.length - 1].level >= b.level) open.pop()
