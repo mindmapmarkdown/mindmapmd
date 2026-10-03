@@ -117,3 +117,34 @@ test('a document with no definition is unchanged', () => {
   const tree = lift('# Guide\n\nText.\n\n- a\n')
   assert.deepEqual(entries(tree.children[0]), [['paragraph', 'Text.']])
 })
+
+test('a definition the parser hid inside an empty paragraph is recovered', () => {
+  // `[x]: /x` then `---` leaves commonmark.js reporting a paragraph with no
+  // children, whose sourcepos covers the definition's own line. Treating those
+  // lines as covered hid the definition from this walk, and the entry came back
+  // as a `paragraph` whose source was the definition — the second arrangement
+  // reported on mindmapmarkdown/spec#56, which turned out to be this bug.
+  const tree = roundTrips('[x]: /x\n---\n')
+  assert.deepEqual(entries(tree), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+})
+
+test('the same under a heading, and inside an item', () => {
+  assert.deepEqual(entries(roundTrips('# Guide\n\n[x]: /x\n---\n').children[0]), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+  assert.deepEqual(entries(roundTrips('- i\n\n  [x]: /x\n  ---\n').children[0]), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+})
+
+test('a blank line between them gives the same tree', () => {
+  assert.deepEqual(entries(roundTrips('[x]: /x\n\n---\n')), [
+    [DEF, '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
+})
