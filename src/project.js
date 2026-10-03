@@ -237,7 +237,7 @@ export function write(tree) {
         // an indented code block whatever the marker was. An empty label with
         // a wide marker reaches four: 11. pads to four. Cap it at three, which
         // still keeps the content inside the item.
-        const contentPad = gap === String.fromCharCode(10).repeat(2) && pad.length > 3 ? "   " : pad
+        const contentPad = !item.label && gap.length > 1 && pad.length > 3 ? '   ' : pad
         return `${head}${gap}${indent([...own, ...nested].join('\n\n'), contentPad)}`
       })
       .join(sep)
