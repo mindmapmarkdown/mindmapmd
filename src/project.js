@@ -209,7 +209,19 @@ export function project(tree) {
           const gap = item.label && item.children[0].label === '' ? '\n\n' : '\n'
           return `${head}${gap}${indent(nested.join('\n'), pad)}`
         }
-        return `${head}\n\n${indent([...own, ...nested].join('\n\n'), pad)}`
+        // RFC 0069 (spec#61) — when this node's label is empty **and** it has
+        // children, its first content entry follows the bare marker directly.
+        // The blank line P-7 would put there, plus the blank line before the
+        // nested list, leaves two in a row once the definition is read out
+        // again, and two blank lines end a list item: the children come back as
+        // siblings.
+        //
+        // The two rules either side of this `if` do not collide. RFC 0046 is
+        // about the label of the first *child* and only runs when this node has
+        // no content of its own; this is about the label of the node being
+        // written, and only runs when it has some.
+        const gap = !item.label && nested.length ? '\n' : '\n\n'
+        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), pad)}`
       })
       .join(sep)
   }
