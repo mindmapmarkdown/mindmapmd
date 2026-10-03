@@ -51,6 +51,13 @@ const problems = await (async () => {
  * empty marker, an ordinal that cannot start a list, a definition CommonMark
  * removes before anything else, indentation at every significant width, a line
  * that ends in whitespace, a fence, a table, a thematic break.
+ *
+ * **Indented copies earn their place separately.** On 2026-10-03 this sweep
+ * reported zero over 240,000 documents while `-` followed by `␣␣---` still
+ * failed, because no fragment could put a thematic break inside a list item: a
+ * generator that cannot reach a known failure overstates what its zero means.
+ * Every construct that can be the first block of a list item is here twice, at
+ * column 0 and indented two.
  */
 const FRAGMENTS = [
   '# A',
@@ -79,6 +86,13 @@ const FRAGMENTS = [
   '   1. n2',
   '---',
   '|h|\n|-|\n|v|',
+  '  ---',
+  '  > q',
+  '  para',
+  '  ' + F + 'sh',
+  '  x',
+  '  ' + F,
+  '  |h|\n  |-|\n  |v|',
 ]
 
 const count = Number(process.argv[2] ?? 40000)
