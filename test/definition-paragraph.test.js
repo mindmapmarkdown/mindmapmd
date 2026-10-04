@@ -7,9 +7,11 @@
 // A definition is removed before the block structure is built, so the paragraph
 // it was written in can be left with a first line that is a paragraph only
 // *because* it cannot interrupt one: an empty ordered item, or an ordered list
-// that does not start at 1. Written after a blank line, that line opens a list —
-// the paragraph stops being content and becomes a node, and the tree does not
-// survive its own projection.
+// that does not start at 1. Written below the definition at column 0, that line
+// opens a
+// list — the paragraph stops being content and becomes a node, and the tree
+// does not survive its own projection. So it is written as a lazy continuation
+// line, indented four columns: the fewest at which no CommonMark block begins.
 //
 // Licensed under Apache-2.0. See LICENSE.
 
@@ -42,7 +44,9 @@ test('an empty ordered item left behind by a definition stays a paragraph', () =
     [DEF, '[x]: /x'],
     ['paragraph', '1.'],
   ])
-  assert.equal(project(tree), md, 'and the document is canonical')
+  // Conforming, and not canonical: canonical form indents the continuation
+  // line four columns.
+  assert.equal(project(tree), '[x]: /x\n    1.\n')
 })
 
 test('an ordered list not starting at 1, likewise', () => {
@@ -52,7 +56,7 @@ test('an ordered list not starting at 1, likewise', () => {
     [DEF, '[x]: /x'],
     ['paragraph', '2. a'],
   ])
-  assert.equal(project(tree), md)
+  assert.equal(project(tree), '[x]: /x\n    2. a\n')
 })
 
 test('ordinary prose after a definition is written the same way', () => {
@@ -64,14 +68,14 @@ test('ordinary prose after a definition is written the same way', () => {
     [DEF, '[x]: /x'],
     ['paragraph', 'See [x].'],
   ])
-  assert.equal(project(tree), md)
+  assert.equal(project(tree), '[x]: /x\n    See [x].\n')
 })
 
 test('a blank line between them is conforming and not canonical', () => {
   // Two documents, one tree. The bytes settle on the first round trip, as with
   // L-9 and L-10.
   const tree = roundTrips('[x]: /x\n\nSee [x].\n')
-  assert.equal(project(tree), '[x]: /x\nSee [x].\n')
+  assert.equal(project(tree), '[x]: /x\n    See [x].\n')
 })
 
 test('the paragraph keeps its own line structure', () => {
@@ -81,27 +85,62 @@ test('the paragraph keeps its own line structure', () => {
     [DEF, '[x]: /x'],
     ['paragraph', 'para\nmore'],
   ])
-  assert.equal(project(tree), md)
+  // Only the first line is indented. A later line of a paragraph opens no block
+  // however it is spelled, and four columns there are four columns E-5 would
+  // have to remove without P-4 having added them.
+  assert.equal(project(tree), '[x]: /x\n    para\nmore\n')
 })
 
-test('inside a list item, P-4 indents both lines', () => {
-  const md = '- i\n\n  [x]: /x\n  1.\n'
-  const tree = roundTrips(md)
+test('inside a list item, the four columns come after the two P-4 adds', () => {
+  const tree = roundTrips('- i\n\n  [x]: /x\n  1.\n')
   assert.deepEqual(entries(tree.children[0]), [
     [DEF, '[x]: /x'],
     ['paragraph', '1.'],
   ])
-  assert.equal(project(tree), md)
+  assert.equal(project(tree), '- i\n\n  [x]: /x\n      1.\n')
 })
 
 test('under a heading', () => {
-  const md = '# Guide\n\n[x]: /x\n1.\n'
-  const tree = roundTrips(md)
+  const tree = roundTrips('# Guide\n\n[x]: /x\n1.\n')
   assert.deepEqual(entries(tree.children[0]), [
     [DEF, '[x]: /x'],
     ['paragraph', '1.'],
   ])
+  assert.equal(project(tree), '# Guide\n\n[x]: /x\n    1.\n')
+})
+
+// ── The two shapes the revision was made for (2026-10-05) ──────────
+
+test('a line that would open a list', () => {
+  // `- a` indented four columns continues the paragraph; at column 0 it opens a
+  // list, and the paragraph becomes a node. This document is canonical.
+  const md = '[x]: /x\n    - a\n'
+  const tree = roundTrips(md)
+  assert.deepEqual(entries(tree), [
+    [DEF, '[x]: /x'],
+    ['paragraph', '- a'],
+  ])
   assert.equal(project(tree), md)
+})
+
+test('a line that would underline a setext heading', () => {
+  // At column 0, `=` makes the definition's line a heading and swallows it:
+  // two content entries came back as one paragraph.
+  const tree = roundTrips('[x]: /x\n\n=\n')
+  assert.deepEqual(entries(tree), [
+    [DEF, '[x]: /x'],
+    ['paragraph', '='],
+  ])
+  assert.equal(project(tree), '[x]: /x\n    =\n')
+})
+
+test('a line that would open a thematic break', () => {
+  const tree = roundTrips('[x]: /x\n    ***\n')
+  assert.deepEqual(entries(tree), [
+    [DEF, '[x]: /x'],
+    ['paragraph', '***'],
+  ])
+  assert.equal(project(tree), '[x]: /x\n    ***\n')
 })
 
 test('a block that is not a paragraph still takes its blank line', () => {

@@ -25,23 +25,33 @@ const written = (e) => (e.block === 'code_block' ? fenced(e.source) : e.source)
 /**
  * The strings P-7 separates with a blank line.
  *
- * PROTOTYPE P-7 (spec#56) — all of them, except that a paragraph directly after
- * a link reference definition is written on the line below it, with no blank
- * line, and the two come back as one string here.
+ * PROTOTYPE P-7 (spec#56, revised 2026-10-05) — all of them, except that a
+ * paragraph directly after a link reference definition is written on the line
+ * below it, with no blank line and **indented four columns**, and the two come
+ * back as one string here.
  *
  * CommonMark takes a definition out of the paragraph it was written in, so the
  * paragraph left behind can begin with a line that is only a paragraph *because*
- * it cannot interrupt one: `1. ` and `2. a` open no list inside a paragraph.
+ * it could not interrupt one: `1. ` and `2. a` open no list inside a paragraph.
  * After a blank line that line opens a list, and the paragraph stops being
  * content and becomes a node. Keeping the two together is what keeps the
  * paragraph a paragraph.
+ *
+ * Keeping them adjacent is not enough on its own. A definition ends the
+ * paragraph it was taken from, so the next line starts a block of its own
+ * unless it cannot: `- n3` opens a list and `=` underlines a setext heading,
+ * both at column 0 and both directly below the definition. Four columns is the
+ * fewest at which no CommonMark block begins — every block opener accepts at
+ * most three columns of indentation, and the one construct that wants four,
+ * indented code, cannot interrupt a paragraph. So the line is a lazy
+ * continuation line, which is the only thing it can be and the thing it was.
  */
 const contentBlocks = (content) => {
   const out = []
   for (const [i, e] of content.entries()) {
     const prev = content[i - 1]
     if (e.block === 'paragraph' && prev?.block === 'link_reference_definition') {
-      out[out.length - 1] = `${out[out.length - 1]}\n${written(e)}`
+      out[out.length - 1] = `${out[out.length - 1]}\n    ${written(e)}`
     } else {
       out.push(written(e))
     }
