@@ -70,11 +70,13 @@ test('a multi-line block in a list item still loses exactly the first line’s c
 })
 
 test('a tab’s worth of indentation is four columns, not one character', () => {
-  // Both lines of the paragraph are indented with one tab, which is four
-  // columns. Counting characters would say the first line gave up one column
-  // and leave three behind on the second.
+  // Both lines are indented with one tab, which is four columns. The item's
+  // content column is two, so two columns come off and the other two are the
+  // author's — they stay in the source, and P-4 puts the item's two back.
+  // Before RFC 0079 the first line’s four came off every line, and the
+  // number removed did not match the number projection added.
   const tree = roundTrips('- item\n\n\tpara\n\tmore\n')
-  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'para\nmore']])
+  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'para\n  more']])
 })
 
 test('a block quote inside an item keeps its own structure', () => {
@@ -150,4 +152,71 @@ test('a paragraph that only looks empty is still a block', () => {
   // definition consumed nothing: the paragraph holds the text `===`.
   const tree = roundTrips('[x]: /x\n===\n')
   assert.deepEqual(contentOf(tree), [['paragraph', '[x]: /x\n===']])
+})
+
+// ── RFC 0079 · E-5 removes what P-4 will add (spec#74) ──────────────
+
+test('a top-level paragraph keeps the indentation projection will not restore', () => {
+  // `  cont` with `    - n3` under it is one paragraph: the second line is a
+  // lazy continuation. The first line gave up two columns to nothing — there
+  // is no container — so removing two from the second line and writing the
+  // result at column 0 put the marker where a list interrupts a paragraph.
+  const tree = roundTrips('  cont\n    - n3\n')
+  assert.deepEqual(contentOf(tree), [['paragraph', 'cont\n    - n3']])
+})
+
+test('a block inside an item loses exactly the item’s content column', () => {
+  assert.deepEqual(contentOf(roundTrips('- i\n\n  para\n  more\n').children[0]), [
+    ['paragraph', 'para\nmore'],
+  ])
+  // Indented further than the item's content column: the excess is the
+  // author's, and it stays.
+  assert.deepEqual(contentOf(roundTrips('- i\n\n   para\n     more\n').children[0]), [
+    ['paragraph', 'para\n   more'],
+  ])
+})
+
+test('a block attached from outside an item uses that item’s column', () => {
+  // L-3 attaches this paragraph to the empty item and P-4 will indent it by
+  // two, so two is what comes off — even though CommonMark puts the paragraph
+  // at the top level. Containment and attachment are different things, and it
+  // is attachment that projection follows.
+  const tree = roundTrips('-\na\nb\n')
+  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'a\nb']])
+})
+
+test('an ordered item’s wider marker takes more columns off', () => {
+  assert.deepEqual(contentOf(roundTrips('10. i\n\n    para\n    more\n').children[0]), [
+    ['paragraph', 'para\nmore'],
+  ])
+})
+
+// ── Neither number alone is the right one (spec#74) ──────────────────
+//
+// E-5 removes, from each later line, the lesser of what the block's first line
+// gave up and what P-4 will put back. Each half of that has a case the other
+// half gets wrong, and both are below.
+
+test('more columns than P-4 will add are not removed', () => {
+  // The paragraph is attached to the root, so P-4 adds nothing — and the two
+  // columns the first line gave up were given to nothing. Removing them anyway
+  // brought the second line back at two columns, where a list marker opens a
+  // list: the content became a node. This is the case on spec#74.
+  const tree = roundTrips('  cont\n    - n3\n')
+  assert.deepEqual(contentOf(tree), [['paragraph', 'cont\n    - n3']])
+})
+
+test('more columns than the first line gave up are not removed either', () => {
+  // The block quote begins at column 0 and L-3 attaches it to the item above,
+  // so P-4 will add the item's two columns to a block that gave up none. Taking
+  // two off the continuation line left it two columns past the content column
+  // once P-4 had written it — close enough to column 0 to open a list.
+  //
+  // Four columns past the content column is what made the line a continuation
+  // line, and it is what has to come back.
+  const tree = roundTrips('- a\n> q\n> r\n    - n3\n')
+  assert.deepEqual(
+    tree.children[0].content.map((e) => [e.block, e.source]),
+    [['block_quote', '> q\n> r\n    - n3']],
+  )
 })
