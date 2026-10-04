@@ -100,3 +100,36 @@ for (const [what, md] of [
     assert.equal(project(lift(project(tree))), project(tree), 'second projection is not byte-stable')
   })
 }
+
+test('a block with no blank line whose content is not YAML is still front matter', () => {
+  // The residual cost of not parsing, recorded rather than left to be found.
+  // Raised on markmap discussion #363 alongside Pandoc's rule, which requires
+  // the block to be a valid YAML object as well as to open on a non-blank
+  // line. This specification takes only the second half, because the first
+  // needs a YAML parser and §1.1.2 refuses to own one.
+  //
+  // §1.2.4 L0 prefers the other answer here: without L-10 commonmark.js reads
+  // this as a thematic break and *two* headings, the closing fence being a
+  // setext underline. RFC 0048's unresolved question 3 says so.
+  const tree = lift('---\n# Meeting notes\nWe agreed.\n---\n')
+  assert.deepEqual(
+    tree.content.map((e) => e.block),
+    ['front_matter'],
+  )
+  assert.equal(tree.children.length, 0, 'the heading is not a node, and that is the known cost')
+})
+
+test('the alternatives the RFC rejects would each break a real block', () => {
+  // "Require the closing fence before the first blank line" — a blank line
+  // between keys is valid YAML and appears in the wild.
+  assert.ok(
+    lift('---\na: 1\n\nb: 2\n---\n\n# A\n').content.some((e) => e.block === 'front_matter'),
+    'a blank line between keys is still front matter',
+  )
+  // "Require the first line to look like a key" — a comment is a thing people
+  // write there.
+  assert.ok(
+    lift('---\n# title: x\nb: 2\n---\n\n# A\n').content.some((e) => e.block === 'front_matter'),
+    'a comment-first block is still front matter',
+  )
+})
