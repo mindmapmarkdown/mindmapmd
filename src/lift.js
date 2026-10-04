@@ -183,14 +183,45 @@ function sourceOf(n, lines) {
   return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
 }
 
-/** Source of a heading or item label, unchanged by the prototype. */
+/**
+ * What may legitimately sit to the left of the column the parser reports for a
+ * label: whitespace, and the list markers whose line the label shares. There
+ * can be several — `- 2026. 1. 15. x` opens three lists inside an item, and the
+ * label of the innermost sits to the right of all four markers.
+ */
+const LEADER = /^(?:[ \t]*(?:[-+*]|\d{1,9}[.)]))*[ \t]*$/
+
+/**
+ * The column a label starts at, measured rather than taken on trust.
+ *
+ * `linesOf` measures its own for the same reason. When a link reference
+ * definition is read out of a paragraph, commonmark.js reports the column the
+ * paragraph had before the definition went — a column *into* the line that
+ * remains — and slicing there drops the first character. `1.`, a tab-indented
+ * `[z]: z`, then `\-` gave the label `-`, and projection wrote `1. -`, which
+ * is a list marker and lifts back to a node. E-4 records the source, and the
+ * backslash is part of it.
+ *
+ * A label shares its line with the marker that opened the node, so a marker to
+ * the left is expected and the column is kept. Anything else is the stale
+ * column above, and the line's own first non-whitespace character is the start.
+ */
+function startColumn(line, sc) {
+  if (LEADER.test(line.slice(0, sc - 1))) return sc - 1
+  let i = 0
+  while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i++
+  return i
+}
+
+/** Source of a heading or item label. */
 function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
+  const start = startColumn(lines[sl - 1], sc)
   let text
   if (sl === el) {
-    text = lines[sl - 1].slice(sc - 1, ec)
+    text = lines[sl - 1].slice(start, Math.max(start, ec))
   } else {
-    const out = [lines[sl - 1].slice(sc - 1)]
+    const out = [lines[sl - 1].slice(start)]
     for (let i = sl; i < el - 1; i++) out.push(lines[i])
     out.push(lines[el - 1].slice(0, ec))
     text = out.join('\n')

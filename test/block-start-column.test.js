@@ -124,3 +124,45 @@ test('a paragraph that only looks empty is still a block', () => {
   const tree = roundTrips('[x]: /x\n===\n')
   assert.deepEqual(contentOf(tree), [['paragraph', '[x]: /x\n===']])
 })
+
+// ── The same column, in a label (E-4) ────────────────────────────────
+//
+// `labelOf` trusted the column the block-start tests above taught `linesOf` to
+// measure. A label is read with `rawSourceOf`, which sliced from the reported
+// column, so the stale column cut a character off the front of the label — and
+// unlike a content entry, a label that loses a backslash becomes a different
+// construct when it is written back.
+
+const labelOf = (tree) => tree.children[0].label
+
+test('a label on the line below a definition keeps its first character', () => {
+  // The ordered item is empty, the tab-indented definition is its content, and
+  // `\\-` is a lazy continuation line of the paragraph the definition came
+  // out of — so it is the item's first inline content, and its label.
+  //
+  // Sliced at the stale column the label was `-`, projection wrote `1. -`, and
+  // that lifts to a nested item: a label became a node.
+  const tree = lift('1.\n\t[z]: /z\n\\-\n')
+  assert.equal(labelOf(tree), '\\-')
+  roundTrips('1.\n\t[z]: /z\n\\-\n')
+})
+
+test('a label still starts after the markers that share its line', () => {
+  // The column is measured, not discarded: everything to the left of a label is
+  // whitespace and list markers, and there can be several of them.
+  assert.equal(labelOf(lift('- \\- a\n')), '\\- a')
+  assert.equal(labelOf(lift('   - a\n')), 'a')
+  assert.equal(labelOf(lift('10) \\*x\n')), '\\*x')
+
+  // `- 2026. 1. 15. x` opens three ordered lists inside the item, so the
+  // innermost label sits to the right of four markers.
+  let n = lift('- 2026. 1. 15. x\n').children[0]
+  while (n.children.length) n = n.children[0]
+  assert.equal(n.label, 'x')
+})
+
+test('a heading label is unaffected', () => {
+  assert.equal(labelOf(lift('# \\# x\n')), '\\# x')
+  assert.equal(labelOf(lift('## Title \\#\n')), 'Title \\#')
+  assert.equal(labelOf(lift('Set\n===\n')), 'Set')
+})
