@@ -128,13 +128,18 @@ function columnsBefore(line, i) {
  * that is what the parser reports, the block begins at the line's first
  * non-whitespace character instead.
  */
-function linesOf(n, lines) {
+function linesOf(n, lines, pad = null) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const first = lines[sl - 1]
   let i = /^[ \t]*$/.test(first.slice(0, sc - 1)) ? sc - 1 : 0
   while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
   if (sl === el) return first.slice(i, Math.max(i, ec))
-  const k = columnsBefore(first, i)
+  // PROTOTYPE (spec#74) — no more columns than the block's first line gave up,
+  // and no more than P-4 will put back. Removing more than the first gave up
+  // takes whitespace the block never had; removing more than P-4 restores loses
+  // whitespace that was there.
+  const gave = columnsBefore(first, i)
+  const k = pad === null ? gave : Math.min(gave, pad)
   const out = [first.slice(i)]
   for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
   out.push(stripColumns(lines[el - 1].slice(0, ec), k))
@@ -182,10 +187,30 @@ function codeSourceOf(n, lines) {
  */
 const isBlock = (n) => !(n.type === 'paragraph' && n.firstChild === null)
 
+/**
+ * How far canonical projection will indent a node's content — P-4's columns.
+ *
+ * PROTOTYPE (spec#74) — E-5 removes from a block's later lines as many columns
+ * as **the first line** gave up, and projection puts back as many as **P-4**
+ * says. Those are the same number almost always, and when they differ the round
+ * trip breaks: `␣␣cont` with `␣␣␣␣- n3` under it is one paragraph attached to
+ * the root, the first line gives up two columns, projection puts back none, and
+ * the line that was four columns in comes back at two — where a list marker
+ * interrupts a paragraph.
+ *
+ * So the number removed is the number P-4 will add, and this records it as the
+ * tree is built.
+ */
+const PAD = new WeakMap()
+const padOf = (n) => PAD.get(n) ?? 0
+
 /** Source of a block recorded as node content. E-5. */
-function sourceOf(n, lines) {
+// The `pad` parameter is RFC 0079's. `trimLines` is NOT here: that is RFC 0057
+// Part 2, which this RFC's prototype carried because it was branched from a
+// stack containing it, and keeping it out is what lets this measure one rule.
+function sourceOf(n, lines, pad = 0) {
   if (n.type === 'code_block') return codeSourceOf(n, lines)
-  const text = linesOf(n, lines)
+  const text = linesOf(n, lines, pad)
   return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
 }
 
@@ -394,6 +419,8 @@ export function lift(markdown) {
       // order, so it is emitted before this item becomes the node L-3 sees.
       definitionsBefore(li.sourcepos[0][0])
       const item = node('item', '')
+      // P-4: the marker's width plus one, relative to the node that holds it.
+      PAD.set(item, padOf(parent) + (ordered ? String(ordinal).length + 1 : 1) + 1)
       if (ordered) {
         item.ordinal = ordinal++
         item.delimiter = list.listDelimiter
@@ -425,7 +452,7 @@ export function lift(markdown) {
         }
         // L-3 — this item, or, after a list nested in this item, that list's
         // deepest last item
-        last.content.push(block(b.type, sourceOf(b, lines)))
+        last.content.push(block(b.type, sourceOf(b, lines, padOf(last))))
       }
       parent.children.push(item)
     }
@@ -447,7 +474,7 @@ export function lift(markdown) {
     } else {
       // L-3 — every other block is content, attached to the nearest node
       // preceding it; content before any node attaches to the root
-      ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines)))
+      ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines, padOf(last ?? tree))))
     }
   }
   definitionsBefore(Infinity) // a definition after every block
