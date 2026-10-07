@@ -185,10 +185,22 @@ const SUITE = (() => {
 })()
 
 const count = Number(process.argv[2] ?? 40000)
-let rng = Number(process.argv[3] ?? 1234567)
+/**
+ * mulberry32. Until 2026-10-07 this was `(rng * 1103515245 + 12345) & 0x7fffffff`
+ * then `rng % n`, and the product passes 2^53, so the low bits were lost before
+ * the mask. Over a million draws `rand(2)` was 0 for 99.6% of them, `rand(4)`
+ * never reached 2 or 3, and `1 + rand(12)` was 1, 5 or 9: the mutating generator
+ * ran on about one document in 250, "indent a line" outdented, and no document
+ * had 3, 4, 7, 8, 11 or 12 fragments. Every zero this sweep reported before then
+ * was over that narrower space.
+ */
+let rng = Number(process.argv[3] ?? 1234567) >>> 0
 const rand = (n) => {
-  rng = (rng * 1103515245 + 12345) & 0x7fffffff
-  return rng % n
+  rng = (rng + 0x6d2b79f5) >>> 0
+  let t = rng
+  t = Math.imul(t ^ (t >>> 15), t | 1)
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+  return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * n)
 }
 const pick = (xs) => xs[rand(xs.length)]
 
