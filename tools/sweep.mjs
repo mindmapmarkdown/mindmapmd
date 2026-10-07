@@ -270,10 +270,101 @@ const mutated = () => {
   return lines.join('\n') + '\n'
 }
 
-// `node tools/sweep.mjs 40000 7 mutated` runs one generator alone. A zero from
+/**
+ * Lines written inside a stack of containers, which neither generator above can
+ * build: a fragment is one line at one column, and an edit moves one line.
+ *
+ * Added 2026-10-07, aimed at the shapes the week's defects came from — a block at
+ * column 0 that `L-3` attaches to the item above it, a definition followed by a
+ * line that could open a block, tabs, and containers inside containers. Each line
+ * picks how many of the open containers it is still inside, may open a new one,
+ * and writes each container's prefix **as written, lazily, over-indented, or with
+ * a tab**, because the distance between what a container asks for and what the
+ * line gives it is where E-5 and P-4 disagree.
+ */
+const LEAVES = [
+  'a',
+  'b c',
+  '',
+  'x' + BS,
+  'p' + SP + SP,
+  BS + '- e',
+  '[x]: /x',
+  '[d]: /d "t"',
+  '- x',
+  '* x',
+  '1. y',
+  '2) y',
+  '-',
+  '1.',
+  '> q',
+  '>',
+  '# h',
+  '=',
+  '===',
+  '---',
+  '***',
+  F,
+  T,
+  '|h|',
+  '|-|',
+  '<div>',
+  '    code',
+  TAB + 't',
+]
+
+const OPENERS = [
+  { kind: 'item', marker: '-' },
+  { kind: 'item', marker: '*' },
+  { kind: 'item', marker: '1.' },
+  { kind: 'item', marker: '10.' },
+  { kind: 'item', marker: '1)' },
+  { kind: 'quote' },
+]
+
+/** What a container puts in front of a line it continues. */
+const continued = (c) => {
+  if (c.kind === 'quote') return pick(['> ', '> ', '>', ' > ', '>' + TAB, ''])
+  const r = rand(10)
+  if (r < 6) return SP.repeat(c.col) // as written
+  if (r === 6) return '' // lazy
+  if (r === 7) return SP.repeat(Math.max(0, c.col - 1 - rand(2))) // short
+  if (r === 8) return SP.repeat(c.col + 1 + rand(4)) // over-indented
+  return c.col >= 4 ? TAB + SP.repeat(c.col - 4) : TAB // a tab where spaces were due
+}
+
+/** What a container puts in front of the line that opens it. */
+const opened = (c) => {
+  if (c.kind === 'quote') return pick(['> ', '>', '  > ', '>' + TAB])
+  const gap = pick([SP, SP, SP, SP + SP, SP.repeat(4), SP.repeat(5), TAB])
+  c.col = c.marker.length + (gap === TAB ? 4 - (c.marker.length % 4) : Math.max(1, gap.length))
+  if (gap.length >= 5) c.col = c.marker.length + 1 // five spaces: content is code
+  return c.marker + gap
+}
+
+const nested = () => {
+  let stack = []
+  const out = []
+  for (let i = 0, k = 2 + rand(10); i < k; i++) {
+    // stay, leave some containers, or open one
+    const keep = rand(4) === 0 ? rand(stack.length + 1) : stack.length
+    stack = stack.slice(0, keep)
+    let prefix = stack.map(continued).join('')
+    if (stack.length < 4 && rand(2) === 0) {
+      const c = { ...pick(OPENERS) }
+      prefix += opened(c)
+      stack.push(c)
+    }
+    out.push((prefix + pick(LEAVES)).replace(/[ \t]+$/, (ws) => (rand(4) ? '' : ws)))
+    if (rand(6) === 0) out.push('')
+  }
+  return out.join('\n') + '\n'
+}
+
+// `node tools/sweep.mjs 40000 7 nested` runs one generator alone. A zero from
 // one generator has been wrong before, so each can be asked on its own.
 const only = process.argv[4]
-const generators = (SUITE.length ? [assembled, mutated] : [assembled]).filter(
+const generators = (SUITE.length ? [assembled, mutated, nested] : [assembled, nested]).filter(
   (g) => !only || g.name === only,
 )
 if (!generators.length) throw new Error(`no generator named ${only}`)
@@ -420,7 +511,8 @@ console.log(
 console.log(
   `searched: ${generators.map((g) => g.name).join(', ')} — ` +
     `${FRAGMENTS.length} fragments, up to 12 per document` +
-    (SUITE.length ? `; ${SUITE.length} suite documents with 1–3 edits` : '; no suite found'),
+    (SUITE.length ? `; ${SUITE.length} suite documents with 1–3 edits` : '; no suite found') +
+    `; ${LEAVES.length} leaves under up to 4 nested containers`,
 )
 if (!problems) console.log('(no src/wellformed.js — S-7 was not checked)')
 
