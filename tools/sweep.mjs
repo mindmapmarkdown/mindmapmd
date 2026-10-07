@@ -270,7 +270,13 @@ const mutated = () => {
   return lines.join('\n') + '\n'
 }
 
-const generators = SUITE.length ? [assembled, mutated] : [assembled]
+// `node tools/sweep.mjs 40000 7 mutated` runs one generator alone. A zero from
+// one generator has been wrong before, so each can be asked on its own.
+const only = process.argv[4]
+const generators = (SUITE.length ? [assembled, mutated] : [assembled]).filter(
+  (g) => !only || g.name === only,
+)
+if (!generators.length) throw new Error(`no generator named ${only}`)
 
 // ── the checks ──────────────────────────────────────────────────────
 
@@ -333,7 +339,7 @@ function shrink(md, why) {
     return bad !== null && complaint(bad.why) === want
   }
   let best = md
-  for (let pass = 0; pass < 8; pass++) {
+  for (let pass = 0; pass < 2000; pass++) {
     let changed = false
     const lines = best.replace(/\n$/, '').split('\n')
     for (let i = 0; i < lines.length; i++) {
@@ -364,7 +370,16 @@ const seen = new Map() // one entry per distinct complaint
 let refused = 0
 let illFormed = 0
 let broke = 0
-const fromGenerator = { assembled: 0, mutated: 0 }
+const fromGenerator = Object.fromEntries(generators.map((g) => [g.name, 0]))
+
+/**
+ * How many failures of one complaint are shrunk. Every S-7 failure has the same
+ * complaint, so until 2026-10-07 the first three examples stood for all of them
+ * and a new shape behind them went unprinted. Now each of the first fifty is
+ * shrunk, and the minimal documents are counted by shape — letters read as one
+ * letter, because which letter survived shrinking is not the shape.
+ */
+const SHRINK = 50
 
 for (let i = 0; i < count; i++) {
   const gen = pick(generators)
@@ -382,16 +397,19 @@ for (let i = 0; i < count; i++) {
   }
   if (bad.kind === 'ill-formed') illFormed++
   else broke++
-  fromGenerator[gen === mutated ? 'mutated' : 'assembled']++
+  fromGenerator[gen.name]++
 
-  const key = bad.why.replace(/[^a-z: ]+/gi, '').slice(0, 60)
-  if (!seen.has(key)) seen.set(key, { why: bad.why, n: 0, examples: [] })
+  const key = complaint(bad.why)
+  if (!seen.has(key)) seen.set(key, { why: bad.why, n: 0, shrunk: 0, examples: new Map() })
   const slot = seen.get(key)
   slot.n++
-  if (slot.examples.length < 3) {
+  if (slot.shrunk < SHRINK) {
+    slot.shrunk++
     const small = shrink(md, bad.why)
-    if (!slot.examples.includes(small)) slot.examples.push(small)
-    slot.examples.sort((x, y) => x.length - y.length)
+    const shape = small.replace(/[a-z]/gi, 'a')
+    const ex = slot.examples.get(shape) ?? { md: small, k: 0 }
+    ex.k++
+    slot.examples.set(shape, ex)
   }
 }
 
@@ -400,8 +418,9 @@ console.log(
   `${count} documents · ${refused} not conforming · ${illFormed} not well-formed · ${broke} failed the round trip`,
 )
 console.log(
-  `searched: ${FRAGMENTS.length} fragments, up to 12 per document` +
-    (SUITE.length ? `, and ${SUITE.length} suite documents with 1–3 edits` : ', no suite found'),
+  `searched: ${generators.map((g) => g.name).join(', ')} — ` +
+    `${FRAGMENTS.length} fragments, up to 12 per document` +
+    (SUITE.length ? `; ${SUITE.length} suite documents with 1–3 edits` : '; no suite found'),
 )
 if (!problems) console.log('(no src/wellformed.js — S-7 was not checked)')
 
@@ -411,12 +430,15 @@ if (!failures) {
 }
 
 console.log(
-  `\nfrom: ${fromGenerator.assembled} assembled, ${fromGenerator.mutated} mutated` +
-    `\n\n${seen.size} distinct complaint(s), each shrunk:\n`,
+  `\nfrom: ${Object.entries(fromGenerator)
+    .map(([g, n]) => `${n} ${g}`)
+    .join(', ')}` + `\n\n${seen.size} distinct complaint(s):\n`,
 )
-for (const { why, n, examples } of [...seen.values()].sort((a, b) => b.n - a.n)) {
+for (const { why, n, shrunk, examples } of [...seen.values()].sort((a, b) => b.n - a.n)) {
   console.log(`  ${n}×  ${why.slice(0, 200)}`)
-  for (const md of examples) console.log(`      ${JSON.stringify(md)}`)
+  console.log(`      ${shrunk} shrunk, to ${examples.size} shape(s):`)
+  const byCount = [...examples.values()].sort((a, b) => b.k - a.k || a.md.length - b.md.length)
+  for (const { md, k } of byCount) console.log(`      ${String(k).padStart(3)}  ${JSON.stringify(md)}`)
   console.log()
 }
 process.exitCode = 1
