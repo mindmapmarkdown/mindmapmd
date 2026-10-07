@@ -280,10 +280,18 @@ function failure(md) {
   } catch (e) {
     return { kind: 'broke', why: `project threw — ${e.message.split('\n')[0]}` }
   }
-  if (!equal(lift(out), tree)) {
+  let back
+  try {
+    back = lift(out)
+  } catch (e) {
+    // Until 2026-10-07 this threw out of the sweep, because no generator reached
+    // it: a projection lift refuses is a failed round trip, not a crash.
+    return { kind: 'broke', why: `the projection is not a conforming document — ${e.message.split('\n')[0]}` }
+  }
+  if (!equal(back, tree)) {
     return { kind: 'broke', why: 'the projection lifts to a different tree' }
   }
-  if (project(lift(out)) !== out) {
+  if (project(back) !== out) {
     return { kind: 'broke', why: 'the second projection is not byte-identical' }
   }
   return null
