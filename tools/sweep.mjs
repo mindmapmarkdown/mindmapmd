@@ -290,12 +290,28 @@ function failure(md) {
 }
 
 /**
+ * What makes two failures "the same way": the complaint, without the detail it
+ * carries after the em dash.
+ *
+ * Shrinking compared whole messages until 2026-10-05, and an S-7 message embeds
+ * the two trees it compared — so **every** shrink changed the message and was
+ * rejected, and the sweep printed generated documents while claiming to print
+ * minimal ones. The examples on spec#74 were found by hand because of it.
+ */
+const complaint = (why) => why.split(' — ')[0]
+
+/**
  * Shrink a failing document while it keeps failing the same way. Line by line
  * first, then character by character, because the document that comes out of a
  * generator is never the document worth writing down.
  */
 function shrink(md, why) {
-  const same = (cand) => cand.trim() !== '' && failure(cand)?.why === why
+  const want = complaint(why)
+  const same = (cand) => {
+    if (cand.trim() === '') return false
+    const bad = failure(cand)
+    return bad !== null && complaint(bad.why) === want
+  }
   let best = md
   for (let pass = 0; pass < 8; pass++) {
     let changed = false
