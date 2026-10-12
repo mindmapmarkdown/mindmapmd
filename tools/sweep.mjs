@@ -185,10 +185,22 @@ const SUITE = (() => {
 })()
 
 const count = Number(process.argv[2] ?? 40000)
-let rng = Number(process.argv[3] ?? 1234567)
+/**
+ * mulberry32. Until 2026-10-07 this was `(rng * 1103515245 + 12345) & 0x7fffffff`
+ * then `rng % n`, and the product passes 2^53, so the low bits were lost before
+ * the mask. Over a million draws `rand(2)` was 0 for 99.6% of them, `rand(4)`
+ * never reached 2 or 3, and `1 + rand(12)` was 1, 5 or 9: the mutating generator
+ * ran on about one document in 250, "indent a line" outdented, and no document
+ * had 3, 4, 7, 8, 11 or 12 fragments. Every zero this sweep reported before then
+ * was over that narrower space.
+ */
+let rng = Number(process.argv[3] ?? 1234567) >>> 0
 const rand = (n) => {
-  rng = (rng * 1103515245 + 12345) & 0x7fffffff
-  return rng % n
+  rng = (rng + 0x6d2b79f5) >>> 0
+  let t = rng
+  t = Math.imul(t ^ (t >>> 15), t | 1)
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+  return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * n)
 }
 const pick = (xs) => xs[rand(xs.length)]
 
@@ -258,7 +270,104 @@ const mutated = () => {
   return lines.join('\n') + '\n'
 }
 
-const generators = SUITE.length ? [assembled, mutated] : [assembled]
+/**
+ * Lines written inside a stack of containers, which neither generator above can
+ * build: a fragment is one line at one column, and an edit moves one line.
+ *
+ * Added 2026-10-07, aimed at the shapes the week's defects came from — a block at
+ * column 0 that `L-3` attaches to the item above it, a definition followed by a
+ * line that could open a block, tabs, and containers inside containers. Each line
+ * picks how many of the open containers it is still inside, may open a new one,
+ * and writes each container's prefix **as written, lazily, over-indented, or with
+ * a tab**, because the distance between what a container asks for and what the
+ * line gives it is where E-5 and P-4 disagree.
+ */
+const LEAVES = [
+  'a',
+  'b c',
+  '',
+  'x' + BS,
+  'p' + SP + SP,
+  BS + '- e',
+  '[x]: /x',
+  '[d]: /d "t"',
+  '- x',
+  '* x',
+  '1. y',
+  '2) y',
+  '-',
+  '1.',
+  '> q',
+  '>',
+  '# h',
+  '=',
+  '===',
+  '---',
+  '***',
+  F,
+  T,
+  '|h|',
+  '|-|',
+  '<div>',
+  '    code',
+  TAB + 't',
+]
+
+const OPENERS = [
+  { kind: 'item', marker: '-' },
+  { kind: 'item', marker: '*' },
+  { kind: 'item', marker: '1.' },
+  { kind: 'item', marker: '10.' },
+  { kind: 'item', marker: '1)' },
+  { kind: 'quote' },
+]
+
+/** What a container puts in front of a line it continues. */
+const continued = (c) => {
+  if (c.kind === 'quote') return pick(['> ', '> ', '>', ' > ', '>' + TAB, ''])
+  const r = rand(10)
+  if (r < 6) return SP.repeat(c.col) // as written
+  if (r === 6) return '' // lazy
+  if (r === 7) return SP.repeat(Math.max(0, c.col - 1 - rand(2))) // short
+  if (r === 8) return SP.repeat(c.col + 1 + rand(4)) // over-indented
+  return c.col >= 4 ? TAB + SP.repeat(c.col - 4) : TAB // a tab where spaces were due
+}
+
+/** What a container puts in front of the line that opens it. */
+const opened = (c) => {
+  if (c.kind === 'quote') return pick(['> ', '>', '  > ', '>' + TAB])
+  const gap = pick([SP, SP, SP, SP + SP, SP.repeat(4), SP.repeat(5), TAB])
+  c.col = c.marker.length + (gap === TAB ? 4 - (c.marker.length % 4) : Math.max(1, gap.length))
+  if (gap.length >= 5) c.col = c.marker.length + 1 // five spaces: content is code
+  return c.marker + gap
+}
+
+const nested = () => {
+  let stack = []
+  const out = []
+  for (let i = 0, k = 2 + rand(10); i < k; i++) {
+    // stay, leave some containers, or open one
+    const keep = rand(4) === 0 ? rand(stack.length + 1) : stack.length
+    stack = stack.slice(0, keep)
+    let prefix = stack.map(continued).join('')
+    if (stack.length < 4 && rand(2) === 0) {
+      const c = { ...pick(OPENERS) }
+      prefix += opened(c)
+      stack.push(c)
+    }
+    out.push((prefix + pick(LEAVES)).replace(/[ \t]+$/, (ws) => (rand(4) ? '' : ws)))
+    if (rand(6) === 0) out.push('')
+  }
+  return out.join('\n') + '\n'
+}
+
+// `node tools/sweep.mjs 40000 7 nested` runs one generator alone. A zero from
+// one generator has been wrong before, so each can be asked on its own.
+const only = process.argv[4]
+const generators = (SUITE.length ? [assembled, mutated, nested] : [assembled, nested]).filter(
+  (g) => !only || g.name === only,
+)
+if (!generators.length) throw new Error(`no generator named ${only}`)
 
 // ── the checks ──────────────────────────────────────────────────────
 
@@ -280,10 +389,18 @@ function failure(md) {
   } catch (e) {
     return { kind: 'broke', why: `project threw — ${e.message.split('\n')[0]}` }
   }
-  if (!equal(lift(out), tree)) {
+  let back
+  try {
+    back = lift(out)
+  } catch (e) {
+    // Until 2026-10-07 this threw out of the sweep, because no generator reached
+    // it: a projection lift refuses is a failed round trip, not a crash.
+    return { kind: 'broke', why: `the projection is not a conforming document — ${e.message.split('\n')[0]}` }
+  }
+  if (!equal(back, tree)) {
     return { kind: 'broke', why: 'the projection lifts to a different tree' }
   }
-  if (project(lift(out)) !== out) {
+  if (project(back) !== out) {
     return { kind: 'broke', why: 'the second projection is not byte-identical' }
   }
   return null
@@ -313,7 +430,7 @@ function shrink(md, why) {
     return bad !== null && complaint(bad.why) === want
   }
   let best = md
-  for (let pass = 0; pass < 8; pass++) {
+  for (let pass = 0; pass < 2000; pass++) {
     let changed = false
     const lines = best.replace(/\n$/, '').split('\n')
     for (let i = 0; i < lines.length; i++) {
@@ -344,7 +461,16 @@ const seen = new Map() // one entry per distinct complaint
 let refused = 0
 let illFormed = 0
 let broke = 0
-const fromGenerator = { assembled: 0, mutated: 0 }
+const fromGenerator = Object.fromEntries(generators.map((g) => [g.name, 0]))
+
+/**
+ * How many failures of one complaint are shrunk. Every S-7 failure has the same
+ * complaint, so until 2026-10-07 the first three examples stood for all of them
+ * and a new shape behind them went unprinted. Now each of the first fifty is
+ * shrunk, and the minimal documents are counted by shape — letters read as one
+ * letter, because which letter survived shrinking is not the shape.
+ */
+const SHRINK = 50
 
 for (let i = 0; i < count; i++) {
   const gen = pick(generators)
@@ -362,16 +488,19 @@ for (let i = 0; i < count; i++) {
   }
   if (bad.kind === 'ill-formed') illFormed++
   else broke++
-  fromGenerator[gen === mutated ? 'mutated' : 'assembled']++
+  fromGenerator[gen.name]++
 
-  const key = bad.why.replace(/[^a-z: ]+/gi, '').slice(0, 60)
-  if (!seen.has(key)) seen.set(key, { why: bad.why, n: 0, examples: [] })
+  const key = complaint(bad.why)
+  if (!seen.has(key)) seen.set(key, { why: bad.why, n: 0, shrunk: 0, examples: new Map() })
   const slot = seen.get(key)
   slot.n++
-  if (slot.examples.length < 3) {
+  if (slot.shrunk < SHRINK) {
+    slot.shrunk++
     const small = shrink(md, bad.why)
-    if (!slot.examples.includes(small)) slot.examples.push(small)
-    slot.examples.sort((x, y) => x.length - y.length)
+    const shape = small.replace(/[a-z]/gi, 'a')
+    const ex = slot.examples.get(shape) ?? { md: small, k: 0 }
+    ex.k++
+    slot.examples.set(shape, ex)
   }
 }
 
@@ -380,8 +509,10 @@ console.log(
   `${count} documents · ${refused} not conforming · ${illFormed} not well-formed · ${broke} failed the round trip`,
 )
 console.log(
-  `searched: ${FRAGMENTS.length} fragments, up to 12 per document` +
-    (SUITE.length ? `, and ${SUITE.length} suite documents with 1–3 edits` : ', no suite found'),
+  `searched: ${generators.map((g) => g.name).join(', ')} — ` +
+    `${FRAGMENTS.length} fragments, up to 12 per document` +
+    (SUITE.length ? `; ${SUITE.length} suite documents with 1–3 edits` : '; no suite found') +
+    `; ${LEAVES.length} leaves under up to 4 nested containers`,
 )
 if (!problems) console.log('(no src/wellformed.js — S-7 was not checked)')
 
@@ -391,12 +522,15 @@ if (!failures) {
 }
 
 console.log(
-  `\nfrom: ${fromGenerator.assembled} assembled, ${fromGenerator.mutated} mutated` +
-    `\n\n${seen.size} distinct complaint(s), each shrunk:\n`,
+  `\nfrom: ${Object.entries(fromGenerator)
+    .map(([g, n]) => `${n} ${g}`)
+    .join(', ')}` + `\n\n${seen.size} distinct complaint(s):\n`,
 )
-for (const { why, n, examples } of [...seen.values()].sort((a, b) => b.n - a.n)) {
+for (const { why, n, shrunk, examples } of [...seen.values()].sort((a, b) => b.n - a.n)) {
   console.log(`  ${n}×  ${why.slice(0, 200)}`)
-  for (const md of examples) console.log(`      ${JSON.stringify(md)}`)
+  console.log(`      ${shrunk} shrunk, to ${examples.size} shape(s):`)
+  const byCount = [...examples.values()].sort((a, b) => b.k - a.k || a.md.length - b.md.length)
+  for (const { md, k } of byCount) console.log(`      ${String(k).padStart(3)}  ${JSON.stringify(md)}`)
   console.log()
 }
 process.exitCode = 1
