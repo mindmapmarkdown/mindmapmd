@@ -197,11 +197,29 @@ function codeSourceOf(n, lines) {
  */
 const isBlock = (n) => !(n.type === 'paragraph' && n.firstChild === null)
 
+/**
+ * PROTOTYPE (spec#59) — RFC 0057 **Part 2**: no line of a recorded string ends
+ * in whitespace.
+ *
+ * `P-8` forbids a line ending in whitespace outside a code block, and `P-9`
+ * writes a recorded source back as it stands, so a `source` whose line ends in
+ * whitespace has **no** canonical projection at all: the P-rules are
+ * unsatisfiable for that tree. This is the collision `L-9` and `L-10` each
+ * resolved for one construct, resolved for the rest.
+ *
+ * Applied after `hardBreaks`, so the two or more spaces that spell a hard break
+ * have already become a backslash and are not removed here.
+ *
+ * Part 1 of the same RFC is not here. It is about where a label's later lines
+ * are written, is objected to on spec#57, and is measured separately.
+ */
+const trimLines = (text) => text.replace(/[ \t]+$/gm, '')
+
 /** Source of a block recorded as node content. E-5. */
 function sourceOf(n, lines) {
-  if (n.type === 'code_block') return codeSourceOf(n, lines)
+  if (n.type === 'code_block') return codeSourceOf(n, lines) // P-8 exempts its content
   const text = linesOf(n, lines)
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
 /**
@@ -247,7 +265,9 @@ function rawSourceOf(n, lines) {
     out.push(lines[el - 1].slice(0, ec))
     text = out.join('\n')
   }
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  // Part 2 applies to a label as much as to a content block: both are recorded
+  // strings, and E-4's trim only reaches the ends of the whole label.
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
 /**
@@ -351,12 +371,21 @@ function leadColumns(line) {
   return col
 }
 
-/** A definition's source, with its container's indentation removed (E-5). */
+/**
+ * A definition's source, with its container's indentation removed (E-5).
+ *
+ * PROTOTYPE (spec#59) — Part 2 reaches here too. A definition is a recorded
+ * string like any other, and `P-9` writes it back as it stands, so `[y]: /y `
+ * with one trailing space has no canonical projection either. The rule as
+ * written already covers it — *no line of a recorded string ends in
+ * whitespace* — but the prototype did not, because RFC 0051 added this path
+ * after RFC 0057 was prototyped and it does not go through `sourceOf`.
+ */
 function runSource(run, lines) {
   const k = leadColumns(lines[run.start - 1])
   const out = []
   for (let i = run.start; i <= run.end; i++) out.push(stripColumns(lines[i - 1], k))
-  return out.join('\n')
+  return trimLines(out.join('\n'))
 }
 
 /**
