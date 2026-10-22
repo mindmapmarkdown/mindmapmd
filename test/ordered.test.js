@@ -22,7 +22,10 @@ import { Parser } from 'commonmark'
 
 import { lift } from '../src/lift.js'
 import { project } from '../src/project.js'
-import { block, node, problems, root, stringify } from '../src/tree.js'
+import { block, node, root, stringify } from '../src/tree.js'
+// S-7 moved well-formedness into its own module. `problems` there is the
+// structural checks plus S-7, which is the stronger claim to make here.
+import { problems } from '../src/wellformed.js'
 
 const parser = new Parser()
 
