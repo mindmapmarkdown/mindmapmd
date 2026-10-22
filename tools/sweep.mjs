@@ -38,6 +38,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
+import { Parser } from 'commonmark'
 import { lift } from '../src/lift.js'
 import { project } from '../src/project.js'
 import { equal } from '../src/tree.js'
@@ -371,6 +372,49 @@ if (!generators.length) throw new Error(`no generator named ${only}`)
 
 // ── the checks ──────────────────────────────────────────────────────
 
+/**
+ * P-8 — no line ends in whitespace, and the document ends in exactly one line
+ * feed. A code block's content is exempt: there the spaces are the code.
+ *
+ * This is checked on the **projection**, which is the only place P-8 applies.
+ * It is a third question, not a restatement of the other two: a tree whose
+ * recorded source carries a trailing space round-trips and satisfies `S-7`,
+ * and its projection still is not a canonical document, because the P-rules
+ * determine no document for it at all (spec#59). Until this check existed the
+ * sweep reported zero over that whole family.
+ *
+ * @returns {string|null} the complaint, or null
+ */
+function breaksP8(out) {
+  if (!out.length) return null
+  const LF = String.fromCharCode(10)
+  if (!out.endsWith(LF)) return 'the document does not end in a line feed'
+  if (out.endsWith(LF + LF)) return 'the document ends in more than one line feed'
+
+  // Which lines are a code block's content is asked of the parser rather than
+  // guessed from the text. A flat scan for fences gets it wrong twice: ```b
+  // does not close ```, and a fence inside an HTML block is not a fence at
+  // all. Both produced false positives here before this used sourcepos.
+  const exempt = new Set()
+  const walk = (n) => {
+    for (let c = n.firstChild; c; c = c.next) {
+      if (c.type === 'code_block' && c.sourcepos) {
+        for (let i = c.sourcepos[0][0]; i <= c.sourcepos[1][0]; i++) exempt.add(i)
+      }
+      walk(c)
+    }
+  }
+  walk(new Parser().parse(out))
+
+  const lines = out.slice(0, -1).split(LF)
+  const TRAILING = new RegExp('[ ' + String.fromCharCode(9) + ']$')
+  for (let i = 0; i < lines.length; i++) {
+    if (exempt.has(i + 1)) continue
+    if (TRAILING.test(lines[i])) return `a line ends in whitespace — ${JSON.stringify(lines[i])}`
+  }
+  return null
+}
+
 /** Why `md` fails, or null. The same question the loop asks, reusable. */
 function failure(md) {
   let tree
@@ -389,6 +433,8 @@ function failure(md) {
   } catch (e) {
     return { kind: 'broke', why: `project threw — ${e.message.split('\n')[0]}` }
   }
+  const p8 = breaksP8(out)
+  if (p8) return { kind: 'not canonical', why: `P-8: ${p8}` }
   let back
   try {
     back = lift(out)
@@ -461,6 +507,7 @@ const seen = new Map() // one entry per distinct complaint
 let refused = 0
 let illFormed = 0
 let broke = 0
+let notCanonical = 0
 const fromGenerator = Object.fromEntries(generators.map((g) => [g.name, 0]))
 
 /**
@@ -487,6 +534,7 @@ for (let i = 0; i < count; i++) {
     continue
   }
   if (bad.kind === 'ill-formed') illFormed++
+  else if (bad.kind === 'not canonical') notCanonical++
   else broke++
   fromGenerator[gen.name]++
 
@@ -504,9 +552,10 @@ for (let i = 0; i < count; i++) {
   }
 }
 
-const failures = illFormed + broke
+const failures = illFormed + notCanonical + broke
 console.log(
-  `${count} documents · ${refused} not conforming · ${illFormed} not well-formed · ${broke} failed the round trip`,
+  `${count} documents · ${refused} not conforming · ${illFormed} not well-formed · ` +
+    `${notCanonical} with no canonical projection · ${broke} failed the round trip`,
 )
 console.log(
   `searched: ${generators.map((g) => g.name).join(', ')} — ` +
