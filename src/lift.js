@@ -283,6 +283,13 @@ function definitionRuns(doc, lines) {
   const walk = (n) => {
     for (let c = n.firstChild; c; c = c.next) {
       if (!c.sourcepos) continue
+      if (!isBlock(c)) {
+        // An empty paragraph is not a block (see `isBlock`), and the lines its
+        // sourcepos spans are the definition that emptied it. Covering them
+        // would hide the definition from this walk, which is what made
+        // `[y]: /y` then `---` record a paragraph instead.
+        continue
+      }
       if (STRUCTURE.has(c.type)) {
         // Only the marker line: the rest of a list's range is its items and the
         // gaps between them, and a gap is what is being looked for. The marker

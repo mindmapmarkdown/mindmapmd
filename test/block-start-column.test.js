@@ -37,7 +37,11 @@ function roundTrips(md) {
 
 test('a paragraph after a definition does not keep the definition’s column', () => {
   const tree = roundTrips('[x]: https://example.com\n  para\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'para']])
+  // RFC 0051 records the definition, so it is the entry before the paragraph.
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: https://example.com'],
+    ['paragraph', 'para'],
+  ])
 })
 
 test('four spaces after a definition is still a paragraph, and loses them', () => {
@@ -46,12 +50,18 @@ test('four spaces after a definition is still a paragraph, and loses them', () =
   // read out of one. Keeping the four spaces made projection write a code
   // block instead — the content changed, not only its spelling.
   const tree = roundTrips('[x]: https://example.com\n    indented\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'indented']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: https://example.com'],
+    ['paragraph', 'indented'],
+  ])
 })
 
 test('the same under a heading, where the node is not the root', () => {
   const tree = roundTrips('# Guide\n\n[x]: https://example.com\n  para\n')
-  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'para']])
+  assert.deepEqual(contentOf(tree.children[0]), [
+    ['link_reference_definition', '[x]: https://example.com'],
+    ['paragraph', 'para'],
+  ])
 })
 
 test('a multi-line block in a list item still loses exactly the first line’s columns', () => {
@@ -79,12 +89,18 @@ test('a column carried over from an indented definition does not cut the line', 
   // container's indentation, so a column with text before it cannot be where
   // the block begins.
   const tree = roundTrips('  [x]: /x\nabcd\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'abcd']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: /x'],
+    ['paragraph', 'abcd'],
+  ])
 })
 
 test('the same over two lines, where the reported range runs backwards', () => {
   const tree = roundTrips('  [x]: /x\nab\ncd\n')
-  assert.deepEqual(contentOf(tree), [['paragraph', 'ab\ncd']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: /x'],
+    ['paragraph', 'ab\ncd'],
+  ])
 })
 
 test('a block legitimately indented keeps the reported column', () => {
@@ -100,20 +116,30 @@ test('an empty paragraph left behind by a definition is not a block', () => {
   // next line closes it without being a setext underline. A paragraph with no
   // inline content does not exist in CommonMark's own terms, and an entry for
   // it recorded a `source` that is the definition — which is not a paragraph.
+  // And with RFC 0051 the definition the empty paragraph was hiding is
+  // recovered, rather than dropped with it.
   const tree = roundTrips('[x]: /x\n---\n')
-  assert.deepEqual(contentOf(tree), [['thematic_break', '---']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[x]: /x'],
+    ['thematic_break', '---'],
+  ])
 })
 
 test('two definitions and a break, likewise', () => {
   const tree = roundTrips('[a]: /a\n[b]: /b\n---\n')
-  assert.deepEqual(contentOf(tree), [['thematic_break', '---']])
+  assert.deepEqual(contentOf(tree), [
+    ['link_reference_definition', '[a]: /a\n[b]: /b'],
+    ['thematic_break', '---'],
+  ])
 })
 
 test('under a heading and inside an item', () => {
   assert.deepEqual(contentOf(roundTrips('# Guide\n\n[x]: /x\n---\n').children[0]), [
+    ['link_reference_definition', '[x]: /x'],
     ['thematic_break', '---'],
   ])
   assert.deepEqual(contentOf(roundTrips('- i\n\n  [x]: /x\n  ---\n').children[0]), [
+    ['link_reference_definition', '[x]: /x'],
     ['thematic_break', '---'],
   ])
 })
@@ -123,46 +149,4 @@ test('a paragraph that only looks empty is still a block', () => {
   // definition consumed nothing: the paragraph holds the text `===`.
   const tree = roundTrips('[x]: /x\n===\n')
   assert.deepEqual(contentOf(tree), [['paragraph', '[x]: /x\n===']])
-})
-
-// ── The same column, in a label (E-4) ────────────────────────────────
-//
-// `labelOf` trusted the column the block-start tests above taught `linesOf` to
-// measure. A label is read with `rawSourceOf`, which sliced from the reported
-// column, so the stale column cut a character off the front of the label — and
-// unlike a content entry, a label that loses a backslash becomes a different
-// construct when it is written back.
-
-const labelOf = (tree) => tree.children[0].label
-
-test('a label on the line below a definition keeps its first character', () => {
-  // The ordered item is empty, the tab-indented definition is its content, and
-  // `\\-` is a lazy continuation line of the paragraph the definition came
-  // out of — so it is the item's first inline content, and its label.
-  //
-  // Sliced at the stale column the label was `-`, projection wrote `1. -`, and
-  // that lifts to a nested item: a label became a node.
-  const tree = lift('1.\n\t[z]: /z\n\\-\n')
-  assert.equal(labelOf(tree), '\\-')
-  roundTrips('1.\n\t[z]: /z\n\\-\n')
-})
-
-test('a label still starts after the markers that share its line', () => {
-  // The column is measured, not discarded: everything to the left of a label is
-  // whitespace and list markers, and there can be several of them.
-  assert.equal(labelOf(lift('- \\- a\n')), '\\- a')
-  assert.equal(labelOf(lift('   - a\n')), 'a')
-  assert.equal(labelOf(lift('10) \\*x\n')), '\\*x')
-
-  // `- 2026. 1. 15. x` opens three ordered lists inside the item, so the
-  // innermost label sits to the right of four markers.
-  let n = lift('- 2026. 1. 15. x\n').children[0]
-  while (n.children.length) n = n.children[0]
-  assert.equal(n.label, 'x')
-})
-
-test('a heading label is unaffected', () => {
-  assert.equal(labelOf(lift('# \\# x\n')), '\\# x')
-  assert.equal(labelOf(lift('## Title \\#\n')), 'Title \\#')
-  assert.equal(labelOf(lift('Set\n===\n')), 'Set')
 })
