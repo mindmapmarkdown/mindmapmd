@@ -8,7 +8,7 @@
 //
 // Licensed under Apache-2.0. See LICENSE.
 
-import { lift } from './lift.js'
+import { liftRaw } from './lift.js'
 import { write } from './project.js'
 import { equal, structuralProblems } from './tree.js'
 
@@ -25,7 +25,7 @@ export function problems(tree) {
 
   let back
   try {
-    back = lift(write(tree))
+    back = liftRaw(write(tree))
   } catch (e) {
     return [`S-7: the canonical projection is not a document lift accepts — ${e.message}`]
   }
