@@ -100,6 +100,66 @@ function columnsBefore(line, i) {
 }
 
 /**
+ * The columns at which list items really begin, by line — taken from the
+ * parser, not from what the text looks like (mindmapmd#17).
+ *
+ * Before RFC 0072 a content block never shared a line with a list marker, so
+ * "anything but whitespace to the left means the parser's column is stale" was
+ * safe. Under RFC 0072 a non-paragraph first block does share that line, and
+ * that test put the marker into the block's own source: `- ***` recorded
+ * `- ***`, which projection wrote back as a nested item.
+ *
+ * Accepting anything marker-shaped to the left was tried on 2026-10-07 and was
+ * worse: a stale column left by a link reference definition can land on a line
+ * whose remaining text begins with a marker-like character, and no pattern
+ * tells those apart. Asking which items the parser actually opened does.
+ *
+ * Module-level because `linesOf` is reached from several places that would all
+ * have to thread it through. Set once per `lift`, which is synchronous.
+ */
+let itemStarts = new Map()
+
+function markerColumns(doc) {
+  const found = new Map()
+  const walk = (n) => {
+    for (let c = n.firstChild; c; c = c.next) {
+      if (c.type === 'item' && c.sourcepos) {
+        const [line, col] = c.sourcepos[0]
+        if (!found.has(line)) found.set(line, new Set())
+        found.get(line).add(col)
+      }
+      walk(c)
+    }
+  }
+  walk(doc)
+  return found
+}
+
+const MARKER = /^(?:[-+*]|\d{1,9}[.)])/
+
+/**
+ * Whether everything to the left of column `sc` on this line belongs to the
+ * block's containers: whitespace, and the markers of list items the parser
+ * says open on this line, at the columns it says they open at.
+ */
+function containerPrefix(line, lineNo, sc) {
+  const prefix = line.slice(0, sc - 1)
+  const starts = itemStarts.get(lineNo)
+  let i = 0
+  while (i < prefix.length) {
+    if (prefix[i] === ' ' || prefix[i] === '\t') {
+      i++
+      continue
+    }
+    if (!starts || !starts.has(i + 1)) return false
+    const m = MARKER.exec(prefix.slice(i))
+    if (!m) return false
+    i += m[0].length
+  }
+  return true
+}
+
+/**
  * The lines a block occupies, as written, with no line losing more than the
  * first did. The first line is cut at the column where the block begins; every
  * later line loses up to that many columns of leading whitespace.
@@ -131,7 +191,7 @@ function columnsBefore(line, i) {
 function linesOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const first = lines[sl - 1]
-  let i = /^[ \t]*$/.test(first.slice(0, sc - 1)) ? sc - 1 : 0
+  let i = containerPrefix(first, sl, sc) ? sc - 1 : 0
   while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
   if (sl === el) return first.slice(i, Math.max(i, ec))
   const k = columnsBefore(first, i)
@@ -357,6 +417,7 @@ export function lift(markdown) {
 
   const lines = text.replace(/\n$/, '').split('\n')
   const doc = parser.parse(text)
+  itemStarts = markerColumns(doc) // mindmapmd#17 — before anything reads a source
   const tree = root()
   if (matter) tree.content.push(block('front_matter', matter.source))
 
