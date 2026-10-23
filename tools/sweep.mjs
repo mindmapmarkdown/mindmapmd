@@ -147,7 +147,6 @@ const FRAGMENTS = [
 
   // L-3 — thematic breaks, in all four spellings
   '---',
-<<<<<<< HEAD
   '***',
   '___',
   '- - -',
