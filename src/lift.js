@@ -128,6 +128,26 @@ function columnsBefore(line, i) {
  * that is what the parser reports, the block begins at the line's first
  * non-whitespace character instead.
  */
+/**
+ * PROTOTYPE switch (spec#79) — which answer to *how many columns does `E-5`
+ * remove from a block's later lines* is in force. The four that have been
+ * proposed are measured in one configuration by setting `MMD_E5`, so that the
+ * comparison does not depend on four branches that differ in other ways too.
+ *
+ *   lesser  the smaller of the two, this RFC's proposal (the default)
+ *   gave    as many as the block's first line gave up — RFC 0038, the rule now
+ *   pad     as many as `P-4` will add back
+ *   all     every column of leading whitespace
+ */
+const E5_RULE = process.env.MMD_E5 ?? 'lesser'
+const E5_COLUMNS = (gave, pad) => {
+  if (E5_RULE === 'gave') return gave
+  if (E5_RULE === 'pad') return pad
+  if (E5_RULE === 'all') return Infinity
+  if (E5_RULE !== 'lesser') throw new Error(`MMD_E5: no rule named ${E5_RULE}`)
+  return Math.min(gave, pad)
+}
+
 function linesOf(n, lines, pad = null) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const first = lines[sl - 1]
@@ -139,7 +159,7 @@ function linesOf(n, lines, pad = null) {
   // takes whitespace the block never had; removing more than P-4 restores loses
   // whitespace that was there.
   const gave = columnsBefore(first, i)
-  const k = pad === null ? gave : Math.min(gave, pad)
+  const k = pad === null ? gave : E5_COLUMNS(gave, pad)
   const out = [first.slice(i)]
   for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
   out.push(stripColumns(lines[el - 1].slice(0, ec), k))
