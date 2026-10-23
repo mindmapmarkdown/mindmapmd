@@ -371,6 +371,17 @@ function runSource(run, lines) {
 export function lift(markdown) {
   if (typeof markdown !== 'string') throw new TypeError('lift expects a string')
 
+  // PROTOTYPE (spec#89) — line endings are normalised before anything reads
+  // the text. CommonMark treats CRLF and a bare CR as line endings and its
+  // parser normalises them, but this implementation also slices the raw text
+  // for `source` and `label`, and there the carriage return survived: a CRLF
+  // document recorded "one\r\ntwo", a line ending in whitespace that P-8
+  // forbids and E-5 has no rule for.
+  //
+  // 186 of the 768 files in the corpus — 24% — contain one, so this is not an
+  // edge case on Windows. spec.md says nothing about line endings at all.
+  markdown = markdown.replace(/\r\n?/g, '\n')
+
   // L-10 — front matter is the root's first content entry and produces no node.
   // Everything after it is an ordinary document, and the line numbers the parser
   // reports are line numbers in that remainder.
