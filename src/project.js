@@ -40,7 +40,18 @@ function runs(children) {
  * CommonMark, whereas the space before an empty label would end the line in
  * whitespace, which P-8 forbids.
  */
-const marked = (marker, label) => (label ? `${marker} ${label}` : marker)
+// RFC 0057 Part 1 (spec#55) -- an item's label of more than one line has
+// its later lines written at the item's content column, the marker's width
+// plus one. A heading is left alone: an ATX heading is one line (spec#64).
+const HEADING = /^#/
+const marked = (marker, label) => {
+  if (!label) return marker
+  const [head, ...rest] = label.split('\n')
+  const line = `${marker} ${head}`
+  if (!rest.length || HEADING.test(marker)) return [line, ...rest].join('\n')
+  const pad = ' '.repeat(marker.length + 1)
+  return [line, ...rest.map((l) => (l.length ? pad + l : l))].join('\n')
+}
 
 const indent = (text, pad) =>
   text

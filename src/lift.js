@@ -258,6 +258,9 @@ function startColumn(line, sc) {
 }
 
 /** Source of a heading or item label. */
+// Measurement switch for RFC 0057 Part 1, so one process can lift both ways.
+const P1 = process.env.MMD_P1 !== '0'
+
 function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const start = startColumn(lines[sl - 1], sc)
@@ -265,9 +268,14 @@ function rawSourceOf(n, lines) {
   if (sl === el) {
     text = lines[sl - 1].slice(start, Math.max(start, ec))
   } else {
+    // RFC 0057 Part 1 (spec#55) -- a label's later lines lose up to as
+    // many columns as its first line gave up, which is what E-5 already
+    // does for a content block. Ported here so Part 1 can be measured with
+    // RFC 0067 above it and no other undecided rule.
+    const k = P1 ? columnsBefore(lines[sl - 1], start) : 0
     const out = [lines[sl - 1].slice(start)]
-    for (let i = sl; i < el - 1; i++) out.push(lines[i])
-    out.push(lines[el - 1].slice(0, ec))
+    for (let i = sl; i < el - 1; i++) out.push(stripColumns(lines[i], k))
+    out.push(stripColumns(lines[el - 1].slice(0, ec), k))
     text = out.join('\n')
   }
   // Part 2 applies to a label as much as to a content block: both are recorded
