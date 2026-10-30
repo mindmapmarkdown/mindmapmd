@@ -428,7 +428,11 @@ export function liftRaw(markdown) {
   //
   // 186 of the 768 files in the corpus — 24% — contain one, so this is not an
   // edge case on Windows. spec.md says nothing about line endings at all.
-  markdown = markdown.replace(/\r\n?/g, '\n')
+  // Measurement switch for the RFC: MMD_CRLF=0 lifts without normalising,
+  // which is what spec.md requires today, because it says nothing.
+  if (process.env.MMD_CRLF !== '0') {
+    markdown = markdown.replace(/\r\n?/g, '\n')
+  }
 
   // L-10 — front matter is the root's first content entry and produces no node.
   // Everything after it is an ordinary document, and the line numbers the parser
