@@ -8,6 +8,11 @@
 
 import { Parser } from 'commonmark'
 import { SECTION_LABEL_BREAK, block, node, root } from './tree.js'
+// PROTOTYPE (spec#85) — a cycle, deliberately: wellformed.js imports `liftRaw`
+// from here and this imports `problems` from there. Both are hoisted function
+// declarations called at run time, which is the one shape an ES module cycle
+// resolves cleanly.
+import { problems } from './wellformed.js'
 
 const parser = new Parser()
 
@@ -389,7 +394,13 @@ function runSource(run, lines) {
 }
 
 /**
- * Lift a document to the tree this specification prescribes for it.
+ * The tree a document denotes, with **no conformance check**.
+ *
+ * PROTOTYPE (spec#85) — this is the reading half of lift, split out for the
+ * same reason `write` is split out of `project`: under RFC 0085 a document
+ * whose tree is not well-formed does not conform, and `lift` refuses it. `S-7`
+ * asks whether a tree's projection lifts back to it, so checking it has to
+ * lift without first checking it. Nothing but `wellformed.js` should call this.
  *
  * L-8 — a function of the document text alone. Nothing here resolves, fetches,
  * or otherwise depends on any resource the document references.
@@ -397,7 +408,7 @@ function runSource(run, lines) {
  * @param {string} markdown
  * @returns {{content: Array, children: Array}}
  */
-export function lift(markdown) {
+export function liftRaw(markdown) {
   if (typeof markdown !== 'string') throw new TypeError('lift expects a string')
 
   // PROTOTYPE (spec#89) — line endings are normalised before anything reads
@@ -527,5 +538,32 @@ export function lift(markdown) {
   }
   definitionsBefore(Infinity) // a definition after every block
 
+  return tree
+}
+
+/**
+ * Lift a document to the tree this specification prescribes for it.
+ *
+ * PROTOTYPE (spec#85) — §1.2.3 gains a third condition: a conforming document's
+ * tree is well-formed. So lift refuses a document whose tree is not, exactly as
+ * it already refuses a heading inside a list item, and §2.4's sentence *"lift
+ * cannot produce a tree that is not well-formed"* stops being a claim about
+ * this function and becomes a consequence of what it accepts.
+ *
+ * The refusal names the first rule the tree fails, because a reader who is told
+ * only *no* cannot act on it (RFC 0085, unresolved question 2).
+ *
+ * @param {string} markdown
+ * @returns {{content: Array, children: Array}}
+ * @throws if the document is not a conforming document
+ */
+export function lift(markdown) {
+  const tree = liftRaw(markdown)
+  const found = problems(tree)
+  if (found.length) {
+    throw new Error(
+      `not a conforming document (spec.md §1.2.3): its tree is not well-formed —\n  ${found.join('\n  ')}`,
+    )
+  }
   return tree
 }
