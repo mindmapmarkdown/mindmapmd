@@ -201,7 +201,15 @@ export function write(tree) {
         // content of its own; this is about the label of the node being
         // written, and only runs when it has some.
         const gap = !item.label && nested.length ? '\n' : '\n\n'
-        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), pad)}`
+        // P-4's exception, added by RFC 0072 Part 2 — an item whose first line
+        // is a bare marker followed by a blank line has its content measured
+        // from column 0, so four columns are an indented code block whatever
+        // the marker was. `11.` pads to four and reaches it. Three is the
+        // largest indentation that is not code, and it still places the content
+        // inside the item. A labelled item never gets here: its content is
+        // measured from the marker, where four columns are exactly right.
+        const contentPad = !item.label && gap.length > 1 && pad.length > 3 ? '   ' : pad
+        return `${head}${gap}${indent([...own, ...nested].join('\n\n'), contentPad)}`
       })
       .join(sep)
   }

@@ -120,6 +120,66 @@ function columnsBefore(line, i) {
 }
 
 /**
+ * The columns at which list items really begin, by line — taken from the
+ * parser, not from what the text looks like (mindmapmd#17).
+ *
+ * Before RFC 0072 a content block never shared a line with a list marker, so
+ * "anything but whitespace to the left means the parser's column is stale" was
+ * safe. Under RFC 0072 a non-paragraph first block does share that line, and
+ * that test put the marker into the block's own source: `- ***` recorded
+ * `- ***`, which projection wrote back as a nested item.
+ *
+ * Accepting anything marker-shaped to the left was tried on 2026-10-07 and was
+ * worse: a stale column left by a link reference definition can land on a line
+ * whose remaining text begins with a marker-like character, and no pattern
+ * tells those apart. Asking which items the parser actually opened does.
+ *
+ * Module-level because `linesOf` is reached from several places that would all
+ * have to thread it through. Set once per `lift`, which is synchronous.
+ */
+let itemStarts = new Map()
+
+function markerColumns(doc) {
+  const found = new Map()
+  const walk = (n) => {
+    for (let c = n.firstChild; c; c = c.next) {
+      if (c.type === 'item' && c.sourcepos) {
+        const [line, col] = c.sourcepos[0]
+        if (!found.has(line)) found.set(line, new Set())
+        found.get(line).add(col)
+      }
+      walk(c)
+    }
+  }
+  walk(doc)
+  return found
+}
+
+const MARKER = /^(?:[-+*]|\d{1,9}[.)])/
+
+/**
+ * Whether everything to the left of column `sc` on this line belongs to the
+ * block's containers: whitespace, and the markers of list items the parser
+ * says open on this line, at the columns it says they open at.
+ */
+function containerPrefix(line, lineNo, sc) {
+  const prefix = line.slice(0, sc - 1)
+  const starts = itemStarts.get(lineNo)
+  let i = 0
+  while (i < prefix.length) {
+    if (prefix[i] === ' ' || prefix[i] === '\t') {
+      i++
+      continue
+    }
+    if (!starts || !starts.has(i + 1)) return false
+    const m = MARKER.exec(prefix.slice(i))
+    if (!m) return false
+    i += m[0].length
+  }
+  return true
+}
+
+/**
  * The lines a block occupies, as written, with no line losing more than the
  * first did. The first line is cut at the column where the block begins; every
  * later line loses up to that many columns of leading whitespace.
@@ -147,14 +207,21 @@ function columnsBefore(line, i) {
  * what precedes a block on its first line is its container's indentation; when
  * that is what the parser reports, the block begins at the line's first
  * non-whitespace character instead.
+ *
+ * RFC 0079 decides how many columns the later lines lose: the **lesser** of
+ * what the first line gave up and what P-4 will indent the block by. The two
+ * agree whenever a block begins at the content column of the node it belongs
+ * to, which is almost always. When they differ, removing more than the first
+ * line gave up takes whitespace that was never the container's to take, and
+ * removing more than P-4 restores loses whitespace the author wrote.
  */
-function linesOf(n, lines) {
+function linesOf(n, lines, pad = 0) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const first = lines[sl - 1]
-  let i = /^[ \t]*$/.test(first.slice(0, sc - 1)) ? sc - 1 : 0
+  let i = containerPrefix(first, sl, sc) ? sc - 1 : 0
   while (i < first.length && (first[i] === ' ' || first[i] === '\t')) i++
   if (sl === el) return first.slice(i, Math.max(i, ec))
-  const k = columnsBefore(first, i)
+  const k = Math.min(columnsBefore(first, i), pad)
   const out = [first.slice(i)]
   for (let j = sl; j < el - 1; j++) out.push(stripColumns(lines[j], k))
   out.push(stripColumns(lines[el - 1].slice(0, ec), k))
@@ -220,10 +287,24 @@ const isBlock = (n) => !(n.type === 'paragraph' && n.firstChild === null)
  */
 const trimLines = (text) => text.replace(/[ \t]+$/gm, '')
 
+/**
+ * How far canonical projection will indent a node's content — P-4's columns.
+ *
+ * RFC 0079 — E-5 removes from a block's later lines the lesser of what the
+ * first line gave up and what P-4 will put back, so the number removed is the
+ * number P-4 adds, by construction, for every block in every tree. It is
+ * recorded here as the tree is built, on the node the block is **attached** to
+ * (L-3), not on the CommonMark container the block was written inside: for
+ * `- a` with `> q` at column 0 under it, those are two and zero, and L-3 says
+ * the item.
+ */
+const PAD = new WeakMap()
+const padOf = (n) => PAD.get(n) ?? 0
+
 /** Source of a block recorded as node content. E-5. */
-function sourceOf(n, lines) {
+function sourceOf(n, lines, pad = 0) {
   if (n.type === 'code_block') return codeSourceOf(n, lines) // P-8 exempts its content
-  const text = linesOf(n, lines)
+  const text = linesOf(n, lines, pad)
   return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
@@ -258,9 +339,6 @@ function startColumn(line, sc) {
 }
 
 /** Source of a heading or item label. */
-// Measurement switch for RFC 0057 Part 1, so one process can lift both ways.
-const P1 = process.env.MMD_P1 !== '0'
-
 function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const start = startColumn(lines[sl - 1], sc)
@@ -268,11 +346,13 @@ function rawSourceOf(n, lines) {
   if (sl === el) {
     text = lines[sl - 1].slice(start, Math.max(start, ec))
   } else {
-    // RFC 0057 Part 1 (spec#55) -- a label's later lines lose up to as
-    // many columns as its first line gave up, which is what E-5 already
-    // does for a content block. Ported here so Part 1 can be measured with
-    // RFC 0067 above it and no other undecided rule.
-    const k = P1 ? columnsBefore(lines[sl - 1], start) : 0
+    // E-4, as RFC 0057 Part 1 amends it — a label's later lines lose up to as
+    // many columns as its first line gave up. A label always begins inside the
+    // node that holds it, so there is no second number here: P-1 writes those
+    // lines back at the item's content column, which is where the first line
+    // began. E-5's `lesser` exists because L-3 can attach a block to a node it
+    // was not written inside; a label cannot be attached across a boundary.
+    const k = columnsBefore(lines[sl - 1], start)
     const out = [lines[sl - 1].slice(start)]
     for (let i = sl; i < el - 1; i++) out.push(stripColumns(lines[i], k))
     out.push(stripColumns(lines[el - 1].slice(0, ec), k))
@@ -438,6 +518,7 @@ export function liftRaw(markdown) {
 
   const lines = text.replace(/\n$/, '').split('\n')
   const doc = parser.parse(text)
+  itemStarts = markerColumns(doc) // mindmapmd#17 — before anything reads a source
   const tree = root()
   if (matter) tree.content.push(block('front_matter', matter.source))
 
@@ -475,6 +556,8 @@ export function liftRaw(markdown) {
       // order, so it is emitted before this item becomes the node L-3 sees.
       definitionsBefore(li.sourcepos[0][0])
       const item = node('item', '')
+      // P-4 — the marker's width plus one, relative to the node that holds it.
+      PAD.set(item, padOf(parent) + (ordered ? String(ordinal).length + 1 : 1) + 1)
       if (ordered) {
         item.ordinal = ordinal++
         item.delimiter = list.listDelimiter
@@ -500,13 +583,23 @@ export function liftRaw(markdown) {
           )
         }
         if (!labelled) {
-          item.label = labelOf(b, lines)
           labelled = true
-          continue
+          // L-2, as RFC 0072 Part 1 amends it — a label is the node's first
+          // **inline** content, so only a paragraph can be one. An item whose
+          // first block is anything else has an empty label, and that block is
+          // content like any other.
+          //
+          // Before this, the block's source became the label: an item opening
+          // with a thematic break had the label `---`, and `- ---` is itself a
+          // thematic break, so the tree had no canonical projection at all.
+          if (b.type === 'paragraph') {
+            item.label = labelOf(b, lines)
+            continue
+          }
         }
         // L-3 — this item, or, after a list nested in this item, that list's
         // deepest last item
-        last.content.push(block(b.type, sourceOf(b, lines)))
+        last.content.push(block(b.type, sourceOf(b, lines, padOf(last))))
       }
       parent.children.push(item)
     }
@@ -541,7 +634,7 @@ export function liftRaw(markdown) {
     } else {
       // L-3 — every other block is content, attached to the nearest node
       // preceding it; content before any node attaches to the root
-      ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines)))
+      ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines, padOf(last ?? tree))))
     }
   }
   definitionsBefore(Infinity) // a definition after every block

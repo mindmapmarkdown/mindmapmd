@@ -71,10 +71,14 @@ test('a multi-line block in a list item still loses exactly the first line’s c
 
 test('a tab’s worth of indentation is four columns, not one character', () => {
   // Both lines of the paragraph are indented with one tab, which is four
-  // columns. Counting characters would say the first line gave up one column
-  // and leave three behind on the second.
+  // columns, and P-4 will write the item's content at two. Under RFC 0079 the
+  // lesser of the two is removed, so the second line keeps two columns.
+  //
+  // The tab is still being counted as four columns rather than as one
+  // character: at one column the lesser would be one, and three columns would
+  // come back on the second line instead of two.
   const tree = roundTrips('- item\n\n\tpara\n\tmore\n')
-  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'para\nmore']])
+  assert.deepEqual(contentOf(tree.children[0]), [['paragraph', 'para\n  more']])
 })
 
 test('a block quote inside an item keeps its own structure', () => {
