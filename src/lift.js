@@ -7,7 +7,12 @@
 // Licensed under Apache-2.0. See LICENSE.
 
 import { Parser } from 'commonmark'
-import { block, node, root } from './tree.js'
+import { SECTION_LABEL_BREAK, block, node, root } from './tree.js'
+// PROTOTYPE (spec#85) — a cycle, deliberately: wellformed.js imports `liftRaw`
+// from here and this imports `problems` from there. Both are hoisted function
+// declarations called at run time, which is the one shape an ES module cycle
+// resolves cleanly.
+import { problems } from './wellformed.js'
 
 const parser = new Parser()
 
@@ -21,6 +26,21 @@ const parser = new Parser()
  * code block for exactly that reason (RFC 0038 Part 3).
  */
 const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
+
+/**
+ * PROTOTYPE (spec#64) — a soft line break inside a label is one space.
+ *
+ * Run after `hardBreaks`, so every line break left is either a hard break,
+ * which `L-9` has already written as a backslash, or a soft one. A soft break
+ * is **invisible**: every renderer collapses it to a space, which is the test
+ * `L-9` applied when it kept the backslash form and dropped the two-space one.
+ *
+ * A backslash at the end of a line is a hard break only when the run of
+ * backslashes before the break is odd; an even run is an escaped backslash
+ * followed by a soft break.
+ */
+const softBreaks = (text) =>
+  text.replace(/(\\*)\n/g, (m, slashes) => (slashes.length % 2 ? m : `${slashes} `))
 const hardBreaks = (text) => text.replace(/[ ]{2,}\n/g, '\\\n')
 
 /**
@@ -45,6 +65,12 @@ const FRONT_MATTER_FENCE = /^---[ \t]*$/
 function frontMatter(markdown) {
   const all = markdown.split('\n')
   if (!FRONT_MATTER_FENCE.test(all[0] ?? '')) return null
+  // PROTOTYPE (RFC 0048) — the line after the opening fence must not be blank.
+  // Front matter written by Jekyll, Hugo or Obsidian opens on its first key. A
+  // note that opens with a thematic break and carries a later one has a blank
+  // line there, and its author means both fences as rules, not as a block —
+  // reported on the Obsidian forum, mindmapmarkdown/spec#35.
+  if (!/\S/.test(all[1] ?? '')) return null
   for (let i = 1; i < all.length; i++) {
     if (!FRONT_MATTER_FENCE.test(all[i])) continue
     return {
@@ -176,11 +202,29 @@ function codeSourceOf(n, lines) {
  */
 const isBlock = (n) => !(n.type === 'paragraph' && n.firstChild === null)
 
+/**
+ * PROTOTYPE (spec#59) — RFC 0057 **Part 2**: no line of a recorded string ends
+ * in whitespace.
+ *
+ * `P-8` forbids a line ending in whitespace outside a code block, and `P-9`
+ * writes a recorded source back as it stands, so a `source` whose line ends in
+ * whitespace has **no** canonical projection at all: the P-rules are
+ * unsatisfiable for that tree. This is the collision `L-9` and `L-10` each
+ * resolved for one construct, resolved for the rest.
+ *
+ * Applied after `hardBreaks`, so the two or more spaces that spell a hard break
+ * have already become a backslash and are not removed here.
+ *
+ * Part 1 of the same RFC is not here. It is about where a label's later lines
+ * are written, is objected to on spec#57, and is measured separately.
+ */
+const trimLines = (text) => text.replace(/[ \t]+$/gm, '')
+
 /** Source of a block recorded as node content. E-5. */
 function sourceOf(n, lines) {
-  if (n.type === 'code_block') return codeSourceOf(n, lines)
+  if (n.type === 'code_block') return codeSourceOf(n, lines) // P-8 exempts its content
   const text = linesOf(n, lines)
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
 /**
@@ -214,6 +258,9 @@ function startColumn(line, sc) {
 }
 
 /** Source of a heading or item label. */
+// Measurement switch for RFC 0057 Part 1, so one process can lift both ways.
+const P1 = process.env.MMD_P1 !== '0'
+
 function rawSourceOf(n, lines) {
   const [[sl, sc], [el, ec]] = n.sourcepos
   const start = startColumn(lines[sl - 1], sc)
@@ -221,12 +268,19 @@ function rawSourceOf(n, lines) {
   if (sl === el) {
     text = lines[sl - 1].slice(start, Math.max(start, ec))
   } else {
+    // RFC 0057 Part 1 (spec#55) -- a label's later lines lose up to as
+    // many columns as its first line gave up, which is what E-5 already
+    // does for a content block. Ported here so Part 1 can be measured with
+    // RFC 0067 above it and no other undecided rule.
+    const k = P1 ? columnsBefore(lines[sl - 1], start) : 0
     const out = [lines[sl - 1].slice(start)]
-    for (let i = sl; i < el - 1; i++) out.push(lines[i])
-    out.push(lines[el - 1].slice(0, ec))
+    for (let i = sl; i < el - 1; i++) out.push(stripColumns(lines[i], k))
+    out.push(stripColumns(lines[el - 1].slice(0, ec), k))
     text = out.join('\n')
   }
-  return INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text
+  // Part 2 applies to a label as much as to a content block: both are recorded
+  // strings, and E-4's trim only reaches the ends of the whole label.
+  return trimLines(INLINE_BLOCKS.has(n.type) ? hardBreaks(text) : text)
 }
 
 /**
@@ -244,17 +298,117 @@ function rawSourceOf(n, lines) {
 const ATX_OPENER = /^[ ]{0,3}#{1,6}(?=[ \t]|$)/
 
 function labelOf(n, lines) {
+  // PROTOTYPE (spec#64) — the fold runs last, on what is left after the marker
+  // and any setext underline are removed. Run earlier it would eat the line
+  // break before the underline, and the underline would join the label.
   const text = rawSourceOf(n, lines)
-  if (n.type !== 'heading') return text.trim()
-  if (!ATX_OPENER.test(text)) return text.replace(/\n[ ]{0,3}(=+|-+)[ \t]*$/, '').trim()
-  return text
-    .replace(ATX_OPENER, '')
-    .replace(/(^|[ \t])#+[ \t]*$/, '')
-    .trim()
+  if (n.type !== 'heading') return softBreaks(text.trim())
+  if (!ATX_OPENER.test(text)) {
+    return softBreaks(text.replace(/\n[ ]{0,3}(=+|-+)[ \t]*$/, '').trim())
+  }
+  return softBreaks(
+    text
+      .replace(ATX_OPENER, '')
+      .replace(/(^|[ \t])#+[ \t]*$/, '')
+      .trim(),
+  )
 }
 
 /**
- * Lift a document to the tree this specification prescribes for it.
+ * PROTOTYPE (RFC 0051, spec#40) — the lines of a link reference definition.
+ *
+ * CommonMark takes a definition out of the document before it builds the tree:
+ * the parser reports no node for it, and the blocks around it report source
+ * positions that skip its lines. Those skipped lines are what this finds — every
+ * line no block covers and that is not blank. In a conforming document nothing
+ * else can be there, because every other construct is a block.
+ *
+ * Container blocks are not counted as cover: a list item's range spans the
+ * definition inside it, which is the gap being looked for.
+ */
+// A list and its items are structure — each item becomes a node, and a gap
+// between them is where a definition can hide. Every other block is recorded
+// with its source intact, a block quote included, so a definition written inside
+// one is already part of what is recorded and is not a gap.
+const STRUCTURE = new Set(['list', 'item'])
+const NON_BLANK = /\S/
+
+function definitionRuns(doc, lines) {
+  const covered = new Set()
+  const walk = (n) => {
+    for (let c = n.firstChild; c; c = c.next) {
+      if (!c.sourcepos) continue
+      if (!isBlock(c)) {
+        // An empty paragraph is not a block (see `isBlock`), and the lines its
+        // sourcepos spans are the definition that emptied it. Covering them
+        // would hide the definition from this walk, which is what made
+        // `[y]: /y` then `---` record a paragraph instead.
+        continue
+      }
+      if (STRUCTURE.has(c.type)) {
+        // Only the marker line: the rest of a list's range is its items and the
+        // gaps between them, and a gap is what is being looked for. The marker
+        // line itself is covered, or an empty item — a bare `-` — would read as
+        // a definition.
+        covered.add(c.sourcepos[0][0])
+      } else {
+        for (let i = c.sourcepos[0][0]; i <= c.sourcepos[1][0]; i++) covered.add(i)
+      }
+      walk(c)
+    }
+  }
+  walk(doc)
+
+  const runs = []
+  for (let i = 1; i <= lines.length; i++) {
+    if (covered.has(i) || !NON_BLANK.test(lines[i - 1])) continue
+    const start = i
+    while (i + 1 <= lines.length && !covered.has(i + 1) && NON_BLANK.test(lines[i])) i++
+    runs.push({ start, end: i })
+  }
+  return runs
+}
+
+/**
+ * The columns of leading whitespace on a line, counting a tab to the next
+ * multiple of four as CommonMark does. E-5 measures a block's starting column,
+ * not its leading characters: one tab is four columns, not one.
+ */
+function leadColumns(line) {
+  let col = 0
+  for (const ch of line) {
+    if (ch === ' ') col++
+    else if (ch === '\t') col += 4 - (col % 4)
+    else break
+  }
+  return col
+}
+
+/**
+ * A definition's source, with its container's indentation removed (E-5).
+ *
+ * PROTOTYPE (spec#59) — Part 2 reaches here too. A definition is a recorded
+ * string like any other, and `P-9` writes it back as it stands, so `[y]: /y `
+ * with one trailing space has no canonical projection either. The rule as
+ * written already covers it — *no line of a recorded string ends in
+ * whitespace* — but the prototype did not, because RFC 0051 added this path
+ * after RFC 0057 was prototyped and it does not go through `sourceOf`.
+ */
+function runSource(run, lines) {
+  const k = leadColumns(lines[run.start - 1])
+  const out = []
+  for (let i = run.start; i <= run.end; i++) out.push(stripColumns(lines[i - 1], k))
+  return trimLines(out.join('\n'))
+}
+
+/**
+ * The tree a document denotes, with **no conformance check**.
+ *
+ * PROTOTYPE (spec#85) — this is the reading half of lift, split out for the
+ * same reason `write` is split out of `project`: under RFC 0085 a document
+ * whose tree is not well-formed does not conform, and `lift` refuses it. `S-7`
+ * asks whether a tree's projection lifts back to it, so checking it has to
+ * lift without first checking it. Nothing but `wellformed.js` should call this.
  *
  * L-8 — a function of the document text alone. Nothing here resolves, fetches,
  * or otherwise depends on any resource the document references.
@@ -262,8 +416,19 @@ function labelOf(n, lines) {
  * @param {string} markdown
  * @returns {{content: Array, children: Array}}
  */
-export function lift(markdown) {
+export function liftRaw(markdown) {
   if (typeof markdown !== 'string') throw new TypeError('lift expects a string')
+
+  // PROTOTYPE (spec#89) — line endings are normalised before anything reads
+  // the text. CommonMark treats CRLF and a bare CR as line endings and its
+  // parser normalises them, but this implementation also slices the raw text
+  // for `source` and `label`, and there the carriage return survived: a CRLF
+  // document recorded "one\r\ntwo", a line ending in whitespace that P-8
+  // forbids and E-5 has no rule for.
+  //
+  // 186 of the 768 files in the corpus — 24% — contain one, so this is not an
+  // edge case on Windows. spec.md says nothing about line endings at all.
+  markdown = markdown.replace(/\r\n?/g, '\n')
 
   // L-10 — front matter is the root's first content entry and produces no node.
   // Everything after it is an ordinary document, and the line numbers the parser
@@ -286,12 +451,38 @@ export function lift(markdown) {
   // list nested in it. Content before any node attaches to the root.
   let last = null
 
+  // PROTOTYPE (RFC 0051) — definitions are attached where L-3 puts any block:
+  // to the nearest node preceding them. The runs come in document order, so
+  // emitting every run that begins before the block about to be read does it.
+  const definitions = definitionRuns(doc, lines)
+  let pending = 0
+  const definitionsBefore = (line) => {
+    while (pending < definitions.length && definitions[pending].start < line) {
+      const run = definitions[pending++]
+      ;(last ?? tree).content.push(block('link_reference_definition', runSource(run, lines)))
+    }
+  }
+
   const items = (list, parent, inItem) => {
+    // L-12 (RFC 0039, accepted 2026-09-29) — an item of an ordered list records
+    // the number CommonMark gives it and its delimiter. The number is the list's
+    // start plus the item's position in that CommonMark list; the numbers written
+    // on later items are ignored by CommonMark and are not recorded.
+    const ordered = list.listType === 'ordered'
+    let ordinal = ordered ? list.listStart : null
     for (let li = list.firstChild; li; li = li.next) {
+      // A definition inside the item before this one precedes it in document
+      // order, so it is emitted before this item becomes the node L-3 sees.
+      definitionsBefore(li.sourcepos[0][0])
       const item = node('item', '')
+      if (ordered) {
+        item.ordinal = ordinal++
+        item.delimiter = list.listDelimiter
+      }
       last = item
       let labelled = false
       for (let b = li.firstChild; b; b = b.next) {
+        definitionsBefore(b.sourcepos[0][0])
         if (!isBlock(b)) continue
         if (b.type === 'list') {
           items(b, item, true) // L-7 — depth is nesting within the list
@@ -323,11 +514,25 @@ export function lift(markdown) {
   }
 
   for (let b = doc.firstChild; b; b = b.next) {
+    definitionsBefore(b.sourcepos[0][0])
     if (!isBlock(b)) continue
     if (b.type === 'heading') {
       // L-5 — a heading at or below the open section's level closes it
       while (open.length && open[open.length - 1].level >= b.level) open.pop()
-      const section = node('section', labelOf(b, lines)) // L-2
+      const label = labelOf(b, lines) // L-2
+      if (SECTION_LABEL_BREAK.test(label)) {
+        // PROTOTYPE S-8 (spec#64). A hard break is all that can be left here
+        // after the soft-break fold, and P-6 has no way to write it: an ATX
+        // heading is one line. §2.4 explains the same shape for a heading
+        // inside a list item — lift is defined over conforming documents.
+        throw new Error(
+          'not a conforming document (spec.md §2.4): a heading whose label ' +
+            'carries a hard line break would lift to a section S-8 forbids, ' +
+            'and P-6 cannot write it — ' +
+            JSON.stringify(label),
+        )
+      }
+      const section = node('section', label)
       current().children.push(section)
       open.push({ level: b.level, node: section })
       last = section
@@ -339,6 +544,34 @@ export function lift(markdown) {
       ;(last ?? tree).content.push(block(b.type, sourceOf(b, lines)))
     }
   }
+  definitionsBefore(Infinity) // a definition after every block
 
+  return tree
+}
+
+/**
+ * Lift a document to the tree this specification prescribes for it.
+ *
+ * PROTOTYPE (spec#85) — §1.2.3 gains a third condition: a conforming document's
+ * tree is well-formed. So lift refuses a document whose tree is not, exactly as
+ * it already refuses a heading inside a list item, and §2.4's sentence *"lift
+ * cannot produce a tree that is not well-formed"* stops being a claim about
+ * this function and becomes a consequence of what it accepts.
+ *
+ * The refusal names the first rule the tree fails, because a reader who is told
+ * only *no* cannot act on it (RFC 0085, unresolved question 2).
+ *
+ * @param {string} markdown
+ * @returns {{content: Array, children: Array}}
+ * @throws if the document is not a conforming document
+ */
+export function lift(markdown) {
+  const tree = liftRaw(markdown)
+  const found = problems(tree)
+  if (found.length) {
+    throw new Error(
+      `not a conforming document (spec.md §1.2.3): its tree is not well-formed —\n  ${found.join('\n  ')}`,
+    )
+  }
   return tree
 }
