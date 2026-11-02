@@ -29,16 +29,18 @@ node --test test/*.test.js
 
 | | |
 |---|---|
-| Lift — every example in the suite | **25 / 25** |
-| Tree round-trip — project, lift back, compare | **25 / 25** |
-| Byte identity, where the example is canonical | **19 / 19** |
+| Lift — every example in the suite | **54 / 54** |
+| Tree round-trip — project, lift back, compare | **54 / 54** |
+| Byte identity, where the example is canonical | **39 / 39** |
 | Idempotence — the second round-trip is byte-stable | **pass** |
 
-**19 of the 25 examples are canonical**, so byte identity is tested on those
-nineteen and nowhere else. The other six are deliberately non-canonical — a
-setext heading, an indented code block, a tilde fence, a hard break spelled with
-trailing spaces, a skipped heading level, and a heading with no blank line after
-it — and exist to show that a conforming document need not be a canonical one.
+**39 of the 54 examples are canonical**, so byte identity is tested on those
+thirty-nine and nowhere else. The other fifteen are deliberately non-canonical
+— setext headings, an indented code block, a tilde fence, a hard break spelled
+with trailing spaces, a lazily continued block, an ordered list whose items are
+all written `1.`, a skipped heading level, a heading with no blank line after
+it, and a multi-line label indented past its content column — and exist to show
+that a conforming document need not be a canonical one.
 
 ## Usage
 
@@ -71,16 +73,15 @@ parser — and the rules of Chapter 2 run over its output. That is the only
 runtime dependency, and it is a deliberate one: an implementation that parsed
 Markdown itself would be testing its own parser rather than the specification.
 
-**Two places the specification does not yet decide**, and what this
+**One place the specification does not yet decide**, and what this
 implementation does in the meantime:
 
 | | What it does | Upstream |
 |---|---|---|
-| A heading inside a list item would lift to a section under an item, which S-1 forbids | Throws, naming §2.4 — the document is not conforming, and lift is defined over conforming documents | — |
 | A `code_block` entry in a tree built by hand, whose `source` is not in L-11's form | Fences it at projection — the only reading that satisfies P-5. Lift cannot produce such an entry | [RFC 0038](https://github.com/mindmapmarkdown/spec/blob/main/rfcs/0038-content-block-source.md), *Unresolved questions* |
 
-Each is a position taken to make the code run, not a reading the specification
-endorses. Where one turns out to be wrong, the fix is upstream first.
+It is a position taken to make the code run, not a reading the specification
+endorses. Should it turn out to be wrong, the fix is upstream first.
 
 **Two rows left this table on 2026-10-01, and one arrived.** What a code block's
 `source` contains, and whether a code block's trailing whitespace may survive
@@ -88,6 +89,14 @@ canonical projection, were open questions; RFC 0038 decided both, `L-11` and the
 amended `P-8` are in the specification, and this implementation follows them
 rather than taking a position of its own. The row that arrived is the question
 the RFC left open in their place.
+
+**A third row left on 2026-10-31.** A document whose tree would not be
+well-formed — a heading inside a list item being the case this implementation
+met — used to be handled by a throw this implementation chose for itself.
+[RFC 0085](https://github.com/mindmapmarkdown/spec/blob/main/rfcs/0085-well-formed-or-not-conforming.md)
+made it §1.2.3's third condition and §2.4's sentence that *lift assigns it no
+tree*, so refusing such a document is now what the specification says rather
+than what this code decided.
 
 **One place the specification decides and the decision is known to be wrong.**
 `L-10` recognises front matter by position, so a document that opens with a

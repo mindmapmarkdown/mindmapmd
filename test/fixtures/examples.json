@@ -6,8 +6,8 @@
       "example": 1,
       "section": "2.1",
       "heading": "Node kind",
-      "start_line": 430,
-      "end_line": 438,
+      "start_line": 435,
+      "end_line": 443,
       "markdown": "# Project\n\n## Install\n",
       "tree": {
         "content": [],
@@ -32,8 +32,8 @@
       "example": 2,
       "section": "2.1",
       "heading": "Node kind",
-      "start_line": 442,
-      "end_line": 449,
+      "start_line": 447,
+      "end_line": 454,
       "markdown": "- Project\n  - Install\n",
       "tree": {
         "content": [],
@@ -58,8 +58,8 @@
       "example": 3,
       "section": "2.1",
       "heading": "Node kind",
-      "start_line": 457,
-      "end_line": 467,
+      "start_line": 462,
+      "end_line": 472,
       "markdown": "# Install\n\n- npm\n- pnpm\n",
       "tree": {
         "content": [],
@@ -90,8 +90,8 @@
       "example": 4,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 613,
-      "end_line": 622,
+      "start_line": 675,
+      "end_line": 684,
       "markdown": "# Install\n\nNode.js 20 or later.\n",
       "tree": {
         "content": [],
@@ -114,8 +114,56 @@
       "example": 5,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 627,
-      "end_line": 634,
+      "start_line": 690,
+      "end_line": 699,
+      "markdown": "-\n\n  > q\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "",
+            "content": [
+              {
+                "block": "block_quote",
+                "source": "> q"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 6,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 704,
+      "end_line": 713,
+      "markdown": "-\n\n  ---\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "",
+            "content": [
+              {
+                "block": "thematic_break",
+                "source": "---"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 7,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 718,
+      "end_line": 725,
       "markdown": "Some prose.\n\n# A\n",
       "tree": {
         "content": [
@@ -135,11 +183,11 @@
       }
     },
     {
-      "example": 6,
+      "example": 8,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 640,
-      "end_line": 650,
+      "start_line": 731,
+      "end_line": 741,
       "markdown": "Install\n=======\n\nRequirements\n------------\n",
       "tree": {
         "content": [],
@@ -161,11 +209,11 @@
       }
     },
     {
-      "example": 7,
+      "example": 9,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 656,
-      "end_line": 666,
+      "start_line": 747,
+      "end_line": 757,
       "markdown": "---\ntitle: Deploy\n---\n\n# Preparation\n",
       "tree": {
         "content": [
@@ -185,11 +233,11 @@
       }
     },
     {
-      "example": 8,
+      "example": 10,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 672,
-      "end_line": 679,
+      "start_line": 763,
+      "end_line": 770,
       "markdown": "---\n\n# A\n",
       "tree": {
         "content": [
@@ -209,11 +257,64 @@
       }
     },
     {
-      "example": 9,
+      "example": 11,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 684,
-      "end_line": 699,
+      "start_line": 776,
+      "end_line": 791,
+      "markdown": "---\n\nA note that opens with a rule.\n\n---\n\nMore text.\n",
+      "tree": {
+        "content": [
+          {
+            "block": "thematic_break",
+            "source": "---"
+          },
+          {
+            "block": "paragraph",
+            "source": "A note that opens with a rule."
+          },
+          {
+            "block": "thematic_break",
+            "source": "---"
+          },
+          {
+            "block": "paragraph",
+            "source": "More text."
+          }
+        ],
+        "children": []
+      }
+    },
+    {
+      "example": 12,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 796,
+      "end_line": 807,
+      "markdown": "---\ntitle: A note\n---\n\n# Heading\n",
+      "tree": {
+        "content": [
+          {
+            "block": "front_matter",
+            "source": "---\ntitle: A note\n---"
+          }
+        ],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Heading",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 13,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 812,
+      "end_line": 827,
       "markdown": "# Install\n\n> Requires Node 20.\n\n```bash\nnpm i\n```\n",
       "tree": {
         "content": [],
@@ -237,11 +338,11 @@
       }
     },
     {
-      "example": 10,
+      "example": 14,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 705,
-      "end_line": 714,
+      "start_line": 833,
+      "end_line": 842,
       "markdown": "# Build\n\n    make all\n",
       "tree": {
         "content": [],
@@ -261,11 +362,11 @@
       }
     },
     {
-      "example": 11,
+      "example": 15,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 718,
-      "end_line": 729,
+      "start_line": 846,
+      "end_line": 857,
       "markdown": "# Run\n\n~~~py\nprint(1)\n~~~\n",
       "tree": {
         "content": [],
@@ -285,11 +386,11 @@
       }
     },
     {
-      "example": 12,
+      "example": 16,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 734,
-      "end_line": 750,
+      "start_line": 864,
+      "end_line": 880,
       "markdown": "- Install\n\n  Run this\n  from the root:\n\n  ```sh\n  npm i\n  ```\n",
       "tree": {
         "content": [],
@@ -313,11 +414,52 @@
       }
     },
     {
-      "example": 13,
+      "example": 17,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 755,
-      "end_line": 767,
+      "start_line": 887,
+      "end_line": 892,
+      "markdown": "  cont\n    - n3\n",
+      "tree": {
+        "content": [
+          {
+            "block": "paragraph",
+            "source": "cont\n    - n3"
+          }
+        ],
+        "children": []
+      }
+    },
+    {
+      "example": 18,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 903,
+      "end_line": 913,
+      "markdown": "- a\n> q\n> r\n    - n3\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a",
+            "content": [
+              {
+                "block": "block_quote",
+                "source": "> q\n> r\n    - n3"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 19,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 918,
+      "end_line": 930,
       "markdown": "# Patch\n\n```diff\n-old  \n+new\n```\n",
       "tree": {
         "content": [],
@@ -337,11 +479,11 @@
       }
     },
     {
-      "example": 14,
+      "example": 20,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 773,
-      "end_line": 786,
+      "start_line": 936,
+      "end_line": 949,
       "markdown": "# Platforms\n\n| Platform | Status |\n|---|---|\n| Linux | ok |\n",
       "tree": {
         "content": [],
@@ -361,11 +503,11 @@
       }
     },
     {
-      "example": 15,
+      "example": 21,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 792,
-      "end_line": 802,
+      "start_line": 955,
+      "end_line": 965,
       "markdown": "# Note\n\nfirst line  \nsecond line\n",
       "tree": {
         "content": [],
@@ -385,11 +527,11 @@
       }
     },
     {
-      "example": 16,
+      "example": 22,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 806,
-      "end_line": 816,
+      "start_line": 969,
+      "end_line": 979,
       "markdown": "# Note\n\nfirst line\\\nsecond line\n",
       "tree": {
         "content": [],
@@ -409,11 +551,413 @@
       }
     },
     {
-      "example": 17,
+      "example": 23,
       "section": "2.2",
       "heading": "What becomes a node",
-      "start_line": 822,
-      "end_line": 831,
+      "start_line": 985,
+      "end_line": 994,
+      "markdown": "# Note\n\npara  \n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Note",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "para"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 24,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1000,
+      "end_line": 1012,
+      "markdown": "[x]: https://example.com\n\n# Guide\n\nSee [the guide][x].\n",
+      "tree": {
+        "content": [
+          {
+            "block": "link_reference_definition",
+            "source": "[x]: https://example.com"
+          }
+        ],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Guide",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "See [the guide][x]."
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 25,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1017,
+      "end_line": 1029,
+      "markdown": "# Guide\n\nText.\n\n[x]: https://example.com\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Guide",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "Text."
+              },
+              {
+                "block": "link_reference_definition",
+                "source": "[x]: https://example.com"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 26,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1033,
+      "end_line": 1045,
+      "markdown": "- a\n\n  [x]: https://example.com\n\n- b\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a",
+            "content": [
+              {
+                "block": "link_reference_definition",
+                "source": "[x]: https://example.com"
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "item",
+            "label": "b",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 27,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1054,
+      "end_line": 1065,
+      "markdown": "-\n  [x]: /x\n\n  - b\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "",
+            "content": [
+              {
+                "block": "link_reference_definition",
+                "source": "[x]: /x"
+              }
+            ],
+            "children": [
+              {
+                "kind": "item",
+                "label": "b",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 28,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1070,
+      "end_line": 1079,
+      "markdown": "-\n\n  [x]: /x\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "",
+            "content": [
+              {
+                "block": "link_reference_definition",
+                "source": "[x]: /x"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 29,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1083,
+      "end_line": 1095,
+      "markdown": "- a\n\n  [x]: /x\n\n  - b\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a",
+            "content": [
+              {
+                "block": "link_reference_definition",
+                "source": "[x]: /x"
+              }
+            ],
+            "children": [
+              {
+                "kind": "item",
+                "label": "b",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 30,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1099,
+      "end_line": 1111,
+      "markdown": "# Setup\n\n1. Install\n2. Configure\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Setup",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "Install",
+                "ordinal": 1,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Configure",
+                "ordinal": 2,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 31,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1115,
+      "end_line": 1127,
+      "markdown": "# Steps\n\n3. Test\n4. Ship\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Steps",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "Test",
+                "ordinal": 3,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Ship",
+                "ordinal": 4,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 32,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1133,
+      "end_line": 1148,
+      "markdown": "# Steps\n\n1. One\n1. Two\n1. Three\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Steps",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "One",
+                "ordinal": 1,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Two",
+                "ordinal": 2,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Three",
+                "ordinal": 3,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 33,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1152,
+      "end_line": 1164,
+      "markdown": "# Steps\n\n1) One\n2) Two\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Steps",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "One",
+                "ordinal": 1,
+                "delimiter": ")",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Two",
+                "ordinal": 2,
+                "delimiter": ")",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 34,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1169,
+      "end_line": 1183,
+      "markdown": "# Log\n\n- 2026. 1. 15. 10:00\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Log",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "",
+                "content": [],
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "",
+                    "ordinal": 2026,
+                    "delimiter": ".",
+                    "content": [],
+                    "children": [
+                      {
+                        "kind": "item",
+                        "label": "",
+                        "ordinal": 1,
+                        "delimiter": ".",
+                        "content": [],
+                        "children": [
+                          {
+                            "kind": "item",
+                            "label": "10:00",
+                            "ordinal": 15,
+                            "delimiter": ".",
+                            "content": [],
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 35,
+      "section": "2.2",
+      "heading": "What becomes a node",
+      "start_line": 1196,
+      "end_line": 1205,
       "markdown": "# Links\n\n- [How to install](https://example.com/)\n",
       "tree": {
         "content": [],
@@ -435,11 +979,11 @@
       }
     },
     {
-      "example": 18,
+      "example": 36,
       "section": "2.3",
       "heading": "Depth, and heading levels",
-      "start_line": 857,
-      "end_line": 865,
+      "start_line": 1231,
+      "end_line": 1239,
       "markdown": "# A\n\n### B\n",
       "tree": {
         "content": [],
@@ -461,11 +1005,11 @@
       }
     },
     {
-      "example": 19,
+      "example": 37,
       "section": "2.3",
       "heading": "Depth, and heading levels",
-      "start_line": 873,
-      "end_line": 884,
+      "start_line": 1247,
+      "end_line": 1258,
       "markdown": "# A\n\n## B\n\n# C\n",
       "tree": {
         "content": [],
@@ -493,11 +1037,11 @@
       }
     },
     {
-      "example": 20,
+      "example": 38,
       "section": "2.3",
       "heading": "Depth, and heading levels",
-      "start_line": 889,
-      "end_line": 901,
+      "start_line": 1263,
+      "end_line": 1275,
       "markdown": "# Menu\n\n- Drinks\n  - Tea\n    - Green\n",
       "tree": {
         "content": [],
@@ -533,11 +1077,11 @@
       }
     },
     {
-      "example": 21,
+      "example": 39,
       "section": "2.5",
       "heading": "Canonical projection",
-      "start_line": 997,
-      "end_line": 1004,
+      "start_line": 1529,
+      "end_line": 1536,
       "markdown": "# A\n## B\n",
       "tree": {
         "content": [],
@@ -559,11 +1103,11 @@
       }
     },
     {
-      "example": 22,
+      "example": 40,
       "section": "2.5",
       "heading": "Canonical projection",
-      "start_line": 1015,
-      "end_line": 1027,
+      "start_line": 1549,
+      "end_line": 1561,
       "markdown": "- Setup\n\n  Run the installer.\n\n- Verify\n",
       "tree": {
         "content": [],
@@ -589,11 +1133,238 @@
       }
     },
     {
-      "example": 23,
+      "example": 41,
       "section": "2.5",
       "heading": "Canonical projection",
-      "start_line": 1039,
-      "end_line": 1054,
+      "start_line": 1567,
+      "end_line": 1575,
+      "markdown": "- a\n\n  -\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 42,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 1580,
+      "end_line": 1593,
+      "markdown": "10. a\n\n11.\n\n   > q\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a",
+            "ordinal": 10,
+            "delimiter": ".",
+            "content": [],
+            "children": []
+          },
+          {
+            "kind": "item",
+            "label": "",
+            "ordinal": 11,
+            "delimiter": ".",
+            "content": [
+              {
+                "block": "block_quote",
+                "source": "> q"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 43,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 1598,
+      "end_line": 1607,
+      "markdown": "10. a\n\n    > q\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a",
+            "ordinal": 10,
+            "delimiter": ".",
+            "content": [
+              {
+                "block": "block_quote",
+                "source": "> q"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 44,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 1612,
+      "end_line": 1628,
+      "markdown": "# Steps\n\n9. Prepare\n   - Back up\n10. Deploy\n    - Swap\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Steps",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "Prepare",
+                "ordinal": 9,
+                "delimiter": ".",
+                "content": [],
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "Back up",
+                    "content": [],
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "kind": "item",
+                "label": "Deploy",
+                "ordinal": 10,
+                "delimiter": ".",
+                "content": [],
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "Swap",
+                    "content": [],
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 45,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 1634,
+      "end_line": 1647,
+      "markdown": "1. Overview\n\nOverview text.\n\n2. Detail\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "Overview",
+            "ordinal": 1,
+            "delimiter": ".",
+            "content": [
+              {
+                "block": "paragraph",
+                "source": "Overview text."
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "item",
+            "label": "Detail",
+            "ordinal": 2,
+            "delimiter": ".",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 46,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 1652,
+      "end_line": 1674,
+      "markdown": "# Rollout\n\n1. Build\n2. Verify\n\nThen, on each server:\n\n1. Stop\n2. Swap\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Rollout",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "Build",
+                "ordinal": 1,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Verify",
+                "ordinal": 2,
+                "delimiter": ".",
+                "content": [
+                  {
+                    "block": "paragraph",
+                    "source": "Then, on each server:"
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Stop",
+                "ordinal": 1,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              },
+              {
+                "kind": "item",
+                "label": "Swap",
+                "ordinal": 2,
+                "delimiter": ".",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 47,
+      "section": "2.5",
+      "heading": "Canonical projection",
+      "start_line": 1686,
+      "end_line": 1701,
       "markdown": "# Install\n\nNode.js 20 or later.\n\n## Requirements\n\n- git\n",
       "tree": {
         "content": [],
@@ -627,11 +1398,11 @@
       }
     },
     {
-      "example": 24,
+      "example": 48,
       "section": "2.6",
       "heading": "The tree encoding used by examples",
-      "start_line": 1139,
-      "end_line": 1147,
+      "start_line": 1869,
+      "end_line": 1877,
       "markdown": "# Guide\n\n## **Fast** start\n",
       "tree": {
         "content": [],
@@ -653,11 +1424,120 @@
       }
     },
     {
-      "example": 25,
+      "example": 49,
       "section": "2.6",
       "heading": "The tree encoding used by examples",
-      "start_line": 1153,
-      "end_line": 1158,
+      "start_line": 1884,
+      "end_line": 1891,
+      "markdown": "Head\nmore\n===\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "section",
+            "label": "Head more",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 50,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 1896,
+      "end_line": 1904,
+      "markdown": "- x\n  - a\n    b\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "x",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "a b",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 51,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 1911,
+      "end_line": 1917,
+      "markdown": "- a\n\tb\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a   b",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 52,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 1927,
+      "end_line": 1933,
+      "markdown": "- a\\\n  b\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "a\\\nb",
+            "content": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "example": 53,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 1935,
+      "end_line": 1943,
+      "markdown": "- x\n  - a\\\n    b\n",
+      "tree": {
+        "content": [],
+        "children": [
+          {
+            "kind": "item",
+            "label": "x",
+            "content": [],
+            "children": [
+              {
+                "kind": "item",
+                "label": "a\\\nb",
+                "content": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "example": 54,
+      "section": "2.6",
+      "heading": "The tree encoding used by examples",
+      "start_line": 1949,
+      "end_line": 1954,
       "markdown": "# café\n",
       "tree": {
         "content": [],
