@@ -426,11 +426,11 @@ function definitionRuns(doc, lines) {
         continue
       }
       if (STRUCTURE.has(c.type)) {
-        // Only the marker line: the rest of a list's range is its items and the
-        // gaps between them, and a gap is what is being looked for. The marker
-        // line itself is covered, or an empty item — a bare `-` — would read as
-        // a definition.
-        covered.add(c.sourcepos[0][0])
+        // Nothing of a list's range is cover: the rest of it is its items and
+        // the gaps between them, and a gap is what is being looked for. The
+        // marker line is not covered either — a definition may begin on it
+        // (mindmapmd#18) — and `markerContent` is what keeps a bare `-` from
+        // reading as one.
       } else {
         for (let i = c.sourcepos[0][0]; i <= c.sourcepos[1][0]; i++) covered.add(i)
       }
@@ -442,11 +442,44 @@ function definitionRuns(doc, lines) {
   const runs = []
   for (let i = 1; i <= lines.length; i++) {
     if (covered.has(i) || !NON_BLANK.test(lines[i - 1])) continue
+    // On a line that opens a list item, a definition begins after the marker if
+    // anything does. `null` means the marker has nothing after it — a bare `-`,
+    // which is an empty item and not a definition.
+    const col = itemStarts.has(i) ? markerContent(lines[i - 1], i) : 0
+    if (col === null) continue
     const start = i
-    while (i + 1 <= lines.length && !covered.has(i + 1) && NON_BLANK.test(lines[i])) i++
-    runs.push({ start, end: i })
+    // A run stops at the next marker line, because the definition after that
+    // marker belongs to the item it opens rather than to this run (L-13 joins
+    // only definitions that no blank line separates *within* one node).
+    while (
+      i + 1 <= lines.length &&
+      !covered.has(i + 1) &&
+      !itemStarts.has(i + 1) &&
+      NON_BLANK.test(lines[i])
+    ) i++
+    runs.push({ start, end: i, col })
   }
   return runs
+}
+
+/**
+ * Where a definition begins on a line that opens one or more list items, as a
+ * character index, or `null` if the innermost marker has nothing after it.
+ *
+ * mindmapmd#18 — the marker line used to be counted as cover, so a definition
+ * written on it was invisible to the walk above: `- [x]: /x` recorded nothing
+ * and projected to `-`, losing the definition and with it every reference-style
+ * link that resolved through it. The innermost marker is the one that matters,
+ * because that is the item the definition is written inside (L-3).
+ */
+function markerContent(line, lineNo) {
+  const cols = itemStarts.get(lineNo)
+  let i = Math.max(...cols) - 1
+  const m = MARKER.exec(line.slice(i))
+  if (!m) return null
+  i += m[0].length
+  while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i++
+  return i < line.length ? i : null
 }
 
 /**
@@ -475,9 +508,13 @@ function leadColumns(line) {
  * after RFC 0057 was prototyped and it does not go through `sourceOf`.
  */
 function runSource(run, lines) {
-  const k = leadColumns(lines[run.start - 1])
-  const out = []
-  for (let i = run.start; i <= run.end; i++) out.push(stripColumns(lines[i - 1], k))
+  const first = lines[run.start - 1]
+  // A run that begins after a list marker (mindmapmd#18) gives up the columns
+  // the marker occupies, not the leading whitespace alone; its later lines are
+  // written at the item's content column and give up the same number.
+  const k = run.col ? columnsBefore(first, run.col) : leadColumns(first)
+  const out = [run.col ? first.slice(run.col) : stripColumns(first, k)]
+  for (let i = run.start + 1; i <= run.end; i++) out.push(stripColumns(lines[i - 1], k))
   return trimLines(out.join('\n'))
 }
 
