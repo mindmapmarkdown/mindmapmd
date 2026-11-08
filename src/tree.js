@@ -111,7 +111,7 @@ export const deepestLast = (n) => (n.children.length ? deepestLast(n.children[n.
 export const MAX_SECTION_DEPTH = 6
 
 /**
- * PROTOTYPE S-8 (spec#64) — a `section`'s label may not contain a line feed.
+ * S-8 (RFC 0067 Part 2) — a `section`'s label may not contain a line feed.
  *
  * `P-6` writes a section as an ATX heading and an ATX heading is one line, so a
  * label with a line break in it has no canonical projection at all. After the
