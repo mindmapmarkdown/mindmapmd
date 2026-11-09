@@ -178,7 +178,7 @@ export function write(tree) {
         // and a sublist is not one. Content, when present, is a block and takes
         // its blank lines.
         if (!own.length) {
-          // PROTOTYPE (RFC 0046) — except when the first nested item has an empty
+          // P-7 (RFC 0046) — except when the first nested item has an empty
           // label under a label of this item's own. Written directly below the
           // label, a bare `-` is a setext heading underline, and CommonMark does
           // not let an empty item of any other marker interrupt a paragraph; a

@@ -78,7 +78,7 @@ test('P-8 · an empty item whose first block was a list', () => {
   holds(lift('- - x\n'), '-\n  - x\n')
 })
 
-// PROTOTYPE (RFC 0046, mindmapmarkdown/spec#45) — an empty item as the first
+// P-7 (RFC 0046, mindmapmarkdown/spec#45) — an empty item as the first
 // child of a labelled item. Under P-7 as written no spelling round-trips: `- a`
 // then `  -` is a setext heading underline. The proposed exception puts one blank
 // line between the label and the nested list.

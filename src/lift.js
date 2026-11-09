@@ -8,7 +8,7 @@
 
 import { Parser } from 'commonmark'
 import { SECTION_LABEL_BREAK, block, node, root } from './tree.js'
-// PROTOTYPE (spec#85) — a cycle, deliberately: wellformed.js imports `liftRaw`
+// S-7 (RFC 0085) — a cycle, deliberately: wellformed.js imports `liftRaw`
 // from here and this imports `problems` from there. Both are hoisted function
 // declarations called at run time, which is the one shape an ES module cycle
 // resolves cleanly.
@@ -28,7 +28,7 @@ const parser = new Parser()
 const INLINE_BLOCKS = new Set(['paragraph', 'heading', 'block_quote'])
 
 /**
- * PROTOTYPE (spec#64) — a soft line break inside a label is one space.
+ * E-4 (RFC 0067 Part 1) — a soft line break inside a label is one space.
  *
  * Run after `hardBreaks`, so every line break left is either a hard break,
  * which `L-9` has already written as a backslash, or a soft one. A soft break
@@ -65,7 +65,7 @@ const FRONT_MATTER_FENCE = /^---[ \t]*$/
 function frontMatter(markdown) {
   const all = markdown.split('\n')
   if (!FRONT_MATTER_FENCE.test(all[0] ?? '')) return null
-  // PROTOTYPE (RFC 0048) — the line after the opening fence must not be blank.
+  // L-10 (RFC 0048) — the line after the opening fence must not be blank.
   // Front matter written by Jekyll, Hugo or Obsidian opens on its first key. A
   // note that opens with a thematic break and carries a later one has a blank
   // line there, and its author means both fences as rules, not as a block —
@@ -270,8 +270,8 @@ function codeSourceOf(n, lines) {
 const isBlock = (n) => !(n.type === 'paragraph' && n.firstChild === null)
 
 /**
- * PROTOTYPE (spec#59) — RFC 0057 **Part 2**: no line of a recorded string ends
- * in whitespace.
+ * E-10 (RFC 0057 Part 2, spec#59) — no line of a recorded string ends in
+ * whitespace.
  *
  * `P-8` forbids a line ending in whitespace outside a code block, and `P-9`
  * writes a recorded source back as it stands, so a `source` whose line ends in
@@ -378,9 +378,10 @@ function rawSourceOf(n, lines) {
 const ATX_OPENER = /^[ ]{0,3}#{1,6}(?=[ \t]|$)/
 
 function labelOf(n, lines) {
-  // PROTOTYPE (spec#64) — the fold runs last, on what is left after the marker
-  // and any setext underline are removed. Run earlier it would eat the line
-  // break before the underline, and the underline would join the label.
+  // E-4 (RFC 0067 Part 1) — the fold runs last, on what is left after the
+  // marker and any setext underline are removed. Run earlier it would eat
+  // the line break before the underline, and the underline would join the
+  // label.
   const text = rawSourceOf(n, lines)
   if (n.type !== 'heading') return softBreaks(text.trim())
   if (!ATX_OPENER.test(text)) {
@@ -395,7 +396,7 @@ function labelOf(n, lines) {
 }
 
 /**
- * PROTOTYPE (RFC 0051, spec#40) — the lines of a link reference definition.
+ * L-13 (RFC 0051, spec#40) — the lines of a link reference definition.
  *
  * CommonMark takes a definition out of the document before it builds the tree:
  * the parser reports no node for it, and the blocks around it report source
@@ -500,7 +501,7 @@ function leadColumns(line) {
 /**
  * A definition's source, with its container's indentation removed (E-5).
  *
- * PROTOTYPE (spec#59) — Part 2 reaches here too. A definition is a recorded
+ * E-10 (RFC 0057 Part 2) reaches here too. A definition is a recorded
  * string like any other, and `P-9` writes it back as it stands, so `[y]: /y `
  * with one trailing space has no canonical projection either. The rule as
  * written already covers it — *no line of a recorded string ends in
@@ -521,7 +522,7 @@ function runSource(run, lines) {
 /**
  * The tree a document denotes, with **no conformance check**.
  *
- * PROTOTYPE (spec#85) — this is the reading half of lift, split out for the
+ * S-7 (RFC 0085) — this is the reading half of lift, split out for the
  * same reason `write` is split out of `project`: under RFC 0085 a document
  * whose tree is not well-formed does not conform, and `lift` refuses it. `S-7`
  * asks whether a tree's projection lifts back to it, so checking it has to
@@ -536,15 +537,20 @@ function runSource(run, lines) {
 export function liftRaw(markdown) {
   if (typeof markdown !== 'string') throw new TypeError('lift expects a string')
 
-  // PROTOTYPE (spec#89) — line endings are normalised before anything reads
-  // the text. CommonMark treats CRLF and a bare CR as line endings and its
-  // parser normalises them, but this implementation also slices the raw text
-  // for `source` and `label`, and there the carriage return survived: a CRLF
-  // document recorded "one\r\ntwo", a line ending in whitespace that P-8
-  // forbids and E-5 has no rule for.
+  // PROTOTYPE (spec#89) — THE ONLY ONE LEFT, and the only behaviour in this
+  // file that spec.md does not require. RFC 0091 proposes it as `L-14` and is
+  // decided on 2026-11-13: on acceptance this marker becomes a citation like
+  // the others, and on rejection this line goes.
   //
-  // 186 of the 768 files in the corpus — 24% — contain one, so this is not an
-  // edge case on Windows. spec.md says nothing about line endings at all.
+  // Line endings are normalised before anything reads the text. CommonMark
+  // treats CRLF and a bare CR as line endings and its parser normalises them,
+  // but this implementation also slices the raw text for `source` and `label`,
+  // and there the carriage return survived: a CRLF document recorded
+  // "one\r\ntwo", a line ending in whitespace that P-8 forbids and E-5 has no
+  // rule for.
+  //
+  // 186 of the 784 files in the corpus — 23.7% — contain one, and without this
+  // line 103 of them are not conforming documents. Re-measured 2026-11-09.
   markdown = markdown.replace(/\r\n?/g, '\n')
 
   // L-10 — front matter is the root's first content entry and produces no node.
@@ -569,7 +575,7 @@ export function liftRaw(markdown) {
   // list nested in it. Content before any node attaches to the root.
   let last = null
 
-  // PROTOTYPE (RFC 0051) — definitions are attached where L-3 puts any block:
+  // L-13 (RFC 0051) — definitions are attached where L-3 puts any block:
   // to the nearest node preceding them. The runs come in document order, so
   // emitting every run that begins before the block about to be read does it.
   const definitions = definitionRuns(doc, lines)
@@ -651,7 +657,7 @@ export function liftRaw(markdown) {
       while (open.length && open[open.length - 1].level >= b.level) open.pop()
       const label = labelOf(b, lines) // L-2
       if (SECTION_LABEL_BREAK.test(label)) {
-        // PROTOTYPE S-8 (spec#64). A hard break is all that can be left here
+        // S-8 (RFC 0067 Part 2). A hard break is all that can be left here
         // after the soft-break fold, and P-6 has no way to write it: an ATX
         // heading is one line. §2.4 explains the same shape for a heading
         // inside a list item — lift is defined over conforming documents.
@@ -682,11 +688,11 @@ export function liftRaw(markdown) {
 /**
  * Lift a document to the tree this specification prescribes for it.
  *
- * PROTOTYPE (spec#85) — §1.2.3 gains a third condition: a conforming document's
- * tree is well-formed. So lift refuses a document whose tree is not, exactly as
- * it already refuses a heading inside a list item, and §2.4's sentence *"lift
- * cannot produce a tree that is not well-formed"* stops being a claim about
- * this function and becomes a consequence of what it accepts.
+ * §1.2.3 and S-3 (RFC 0085) — a conforming document's tree is well-formed,
+ * which is §1.2.3's third condition. So lift refuses a document whose tree is
+ * not, exactly as it already refuses a heading inside a list item, and §2.4's
+ * sentence *"lift cannot produce a tree that is not well-formed"* stops being
+ * a claim about this function and becomes a consequence of what it accepts.
  *
  * The refusal names the first rule the tree fails, because a reader who is told
  * only *no* cannot act on it (RFC 0085, unresolved question 2).
