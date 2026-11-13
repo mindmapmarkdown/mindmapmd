@@ -537,10 +537,9 @@ function runSource(run, lines) {
 export function liftRaw(markdown) {
   if (typeof markdown !== 'string') throw new TypeError('lift expects a string')
 
-  // PROTOTYPE (spec#89) — THE ONLY ONE LEFT, and the only behaviour in this
-  // file that spec.md does not require. RFC 0091 proposes it as `L-14` and is
-  // decided on 2026-11-13: on acceptance this marker becomes a citation like
-  // the others, and on rejection this line goes.
+  // L-14 (RFC 0091) — accepted 2026-11-13. This was the last PROTOTYPE marker
+  // in the repository, and the last behaviour in `src/` that spec.md did not
+  // require; the rule it implements landed in spec#99.
   //
   // Line endings are normalised before anything reads the text. CommonMark
   // treats CRLF and a bare CR as line endings and its parser normalises them,
