@@ -4,11 +4,13 @@
 // RFC 0067's only prototype was branched from RFC 0057's, which is objected to,
 // so "no document that round-trips today stops doing so" could not be checked.
 // `rfc/0067-on-accepted` is the accepted rules plus RFC 0067 alone and answered
-// that. This branch adds Part 1 back, above RFC 0085, so that both outcomes can
-// be compared in one configuration — which is what Part 1's objection of
-// 2026-10-14 asked for and what no branch could show until now.
+// that. A second branch added Part 1 back, above RFC 0085, so that both
+// outcomes could be compared in one configuration — which is what Part 1's
+// objection of 2026-10-14 asked for and what no branch could show until then.
 //
-// `MMD_P1=0` lifts without Part 1, for the comparison the decision quotes.
+// Both rules are in spec.md now (spec#92), so this file tests the landed
+// behaviour and there is nothing left to switch off: the `MMD_P1=0` lift the
+// decision quotes lived on those branches, not here.
 //
 // Licensed under Apache-2.0. See LICENSE.
 
