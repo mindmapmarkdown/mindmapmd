@@ -4,9 +4,12 @@ The reference implementation of [Mindmap Markdown](https://github.com/mindmapmar
 **lift** (a document determines one tree) and **canonical projection** (a tree
 determines one document).
 
-> **⚠ Nothing is released.** The specification is a Draft with no version number,
-> and so is this. It tracks `spec.md` at a recorded commit rather than a tag,
-> because there is no tag yet — see [`test/fixtures/EXAMPLES_FROM.txt`](test/fixtures/EXAMPLES_FROM.txt).
+> **⚠ The specification is a Draft.** It is released as
+> [**0.1.0**](https://github.com/mindmapmarkdown/spec/releases/tag/v0.1.0), which
+> names a state rather than promising stability — below 1.0 a Breaking change
+> bumps MINOR. This implementation is not itself versioned; it tracks the
+> specification at the tag above, recorded in
+> [`test/fixtures/EXAMPLES_FROM.txt`](test/fixtures/EXAMPLES_FROM.txt).
 
 ## What it claims
 
@@ -17,9 +20,17 @@ determines one document).
 | **L2** | Round-trip | not implemented. Diff, merge, and subtree exchange need node matching, and the rules for it are not written |
 
 An L1 claim names a release as well as a level
-([`VERSIONING.md` §4](https://github.com/mindmapmarkdown/spec/blob/main/VERSIONING.md)).
-**This one names a commit, so it is not yet a claim** — it is a demonstration
-that the specification is implementable.
+([`VERSIONING.md` §4](https://github.com/mindmapmarkdown/spec/blob/main/VERSIONING.md)),
+and now there is one to name:
+
+> **Mindmap Markdown 0.1.0, level L1**
+
+That is a claim, checkable rather than asserted — the suite it is made against
+is the one attached to that release, pinned here, and the table below is what
+running it reports. It remains a demonstration that the specification is
+implementable, and **not** one of the two independent implementations 1.0
+requires: it was written by the same person as the specification, which is
+exactly what that condition excludes.
 
 ## Conformance
 
