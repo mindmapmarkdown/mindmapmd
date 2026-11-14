@@ -21,7 +21,13 @@ const here = dirname(fileURLToPath(import.meta.url))
 const suite = JSON.parse(readFileSync(join(here, 'fixtures', 'examples.json'), 'utf8'))
 const from = readFileSync(join(here, 'fixtures', 'EXAMPLES_FROM.txt'), 'utf8').trim()
 
-test(`the suite is the one generated from spec.md at ${from.slice(0, 8)}`, () => {
+// The pin is a release tag once one exists and a commit before that. Abbreviate
+// a full hash so the test name stays readable; print anything else as written,
+// because `v0.1.0` truncated to eight characters is not shorter and a truncated
+// tag would be a worse name than the tag.
+const at = /^[0-9a-f]{40}$/.test(from) ? from.slice(0, 8) : from
+
+test(`the suite is the one generated from spec.md at ${at}`, () => {
   assert.ok(suite.examples.length > 0, 'the suite is empty')
 })
 
