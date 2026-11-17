@@ -23,7 +23,7 @@ const from = readFileSync(join(here, 'fixtures', 'EXAMPLES_FROM.txt'), 'utf8').t
 
 // The pin is a release tag once one exists and a commit before that. Abbreviate
 // a full hash so the test name stays readable; print anything else as written,
-// because `v0.1.0` truncated to eight characters is not shorter and a truncated
+// because `v0.1.1` truncated to eight characters is not shorter and a truncated
 // tag would be a worse name than the tag.
 const at = /^[0-9a-f]{40}$/.test(from) ? from.slice(0, 8) : from
 

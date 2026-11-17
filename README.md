@@ -5,7 +5,7 @@ The reference implementation of [Mindmap Markdown](https://github.com/mindmapmar
 determines one document).
 
 > **⚠ The specification is a Draft.** It is released as
-> [**0.1.0**](https://github.com/mindmapmarkdown/spec/releases/tag/v0.1.0), which
+> [**0.1.1**](https://github.com/mindmapmarkdown/spec/releases/tag/v0.1.1), which
 > names a state rather than promising stability — below 1.0 a Breaking change
 > bumps MINOR. This implementation is not itself versioned; it tracks the
 > specification at the tag above, recorded in
@@ -23,7 +23,7 @@ An L1 claim names a release as well as a level
 ([`VERSIONING.md` §4](https://github.com/mindmapmarkdown/spec/blob/main/VERSIONING.md)),
 and now there is one to name:
 
-> **Mindmap Markdown 0.1.0, level L1**
+> **Mindmap Markdown 0.1.1, level L1**
 
 That is a claim, checkable rather than asserted — the suite it is made against
 is the one attached to that release, pinned here, and the table below is what
